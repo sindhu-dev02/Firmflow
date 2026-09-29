@@ -4,6 +4,7 @@ export function serializeUser(user: {
   email: string;
   role: string;
   organizationId?: any;
+  isActive?: boolean;
 }) {
   return {
     id: user._id,
@@ -11,5 +12,6 @@ export function serializeUser(user: {
     email: user.email,
     role: user.role,
     organizationId: user.organizationId ?? null,
+    isActive: user.isActive ?? true,
   };
 }
