@@ -18,18 +18,20 @@ import planRoutes from './modules/plan/plan.routes';
 import subscriptionRoutes from './modules/subscription/subscription.routes';
 import webhookRoutes from './modules/webhook/webhook.routes';
 import invoiceRoutes from './modules/invoice/invoice.routes';
+import activityLogRoutes from './modules/activityLog/activityLog.routes';
+
 
 const app = express();
 
-app.use(helmet());
 app.use(
   cors({
     origin: env.clientUrl,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
-app.use(cookieParser());
-app.use(pinoHttp({ logger }));
+app.use(helmet());
 
 // Must come BEFORE express.json() below — signature verification needs the
 // exact raw bytes Razorpay sent. If express.json() ran first, it would
@@ -63,6 +65,7 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
