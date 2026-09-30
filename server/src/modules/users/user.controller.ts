@@ -5,6 +5,7 @@ import { AppError } from "../../middlewares/errorHandler";
 import { serializeUser } from "../../shared/utils/serializeUser";
 import { tenantFilter } from "../../shared/helpers/tenantFilter";
 import { hashPassword } from "../../shared/utils/password";
+import { logActivity } from "../../shared/utils/logActivity";
 
 export const getProfile = catchAsync(async (req: Request, res: Response) => {
   const user = await User.findById(req.user!.userId);
@@ -80,6 +81,13 @@ export const inviteUser = catchAsync(async (req: Request, res: Response) => {
     mustChangePassword: true,
   });
 
+  await logActivity(req, {
+    action: 'user.invited',
+    targetType: 'user',
+    targetId: String(newUser._id),
+    metadata: { name: newUser.name, role: newUser.role },
+  });
+
   res.status(201).json({
     success: true,
     data: { user: serializeUser(newUser) },
@@ -110,6 +118,13 @@ export const deactivateUser = catchAsync(async (req: Request, res: Response) => 
   targetUser.isActive = false;
   await targetUser.save();
 
+  await logActivity(req, {
+    action: 'user.deactivated',
+    targetType: 'user',
+    targetId: String(targetUser._id),
+    metadata: { name: targetUser.name },
+  });
+
   res.status(200).json({
     success: true,
     data: { user: serializeUser(targetUser) },
@@ -128,6 +143,13 @@ export const reactivateUser = catchAsync(async (req: Request, res: Response) => 
 
   targetUser.isActive = true;
   await targetUser.save();
+
+  await logActivity(req, {
+    action: 'user.reactivated',
+    targetType: 'user',
+    targetId: String(targetUser._id),
+    metadata: { name: targetUser.name },
+  });
 
   res.status(200).json({
     success: true,

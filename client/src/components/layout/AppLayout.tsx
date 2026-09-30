@@ -6,13 +6,14 @@ import { useLogout } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { CommandPalette  } from '@/components/ui/CommandPalette';
-import { LayoutDashboard, Users, User, CreditCard, Menu, ChevronsLeft, X, Package } from 'lucide-react';
+import { LayoutDashboard, Users, User, CreditCard, Menu, ChevronsLeft, X, Package, History } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['org_owner', 'employee', 'customer'] },
   { to: '/team', label: 'Team', icon: Users, roles: ['org_owner', 'employee'] },
   { to: '/billing', label: 'Billing', icon: CreditCard, roles: ['org_owner', 'employee'] },
-  {to: '/products', label: 'Products', icon: Package, roles: ['org_owner','employee']},
+  { to: '/products', label: 'Products', icon: Package, roles: ['org_owner','employee' ] },
+  { to: '/activity', label: 'Activity', icon: History, roles: ['org_owner'] },
   { to: '/profile', label: 'Profile', icon: User, roles: ['org_owner', 'employee', 'customer', 'super_admin'] },
 ];
 
@@ -22,6 +23,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/billing': 'Billing',
   '/billing/plans': 'Plans & Pricing',
   '/products': 'Products',
+  '/activity': 'Activity',
   '/profile': 'Profile',
 };
 

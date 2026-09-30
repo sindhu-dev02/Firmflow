@@ -11,6 +11,7 @@ import { ChangePasswordPage } from '@/pages/auth/ChangePasswordPage';
 import { BillingPage } from '@/pages/billing/BillingPage';
 import { PricingPage } from '@/pages/billing/PricingPage';
 import { ProductsPage } from '@/pages/products/ProductsPage';
+import { ActivityLogPage } from '@/pages/activity/ActivityLogPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -39,6 +40,13 @@ export const router = createBrowserRouter([
               { path: '/billing', element: <BillingPage /> },
               { path: '/billing/plans', element: <PricingPage /> },
               { path: '/products', element: <ProductsPage /> },
+            ],
+          },
+
+          {
+            element: <ProtectedRoute allowedRoles={['org_owner']} />,
+            children: [
+              { path: '/activity', element: <ActivityLogPage /> },
             ],
           },
         ],

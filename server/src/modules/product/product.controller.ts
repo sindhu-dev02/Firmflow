@@ -4,6 +4,7 @@ import { serializeProduct } from './product.serializer';
 import { catchAsync } from '../../shared/utils/catchAsync';
 import { AppError } from '../../middlewares/errorHandler';
 import { Category } from '../category/category.model';
+import { logActivity } from "../../shared/utils/logActivity";
 
 export const createProduct = catchAsync(async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
@@ -30,6 +31,13 @@ export const createProduct = catchAsync(async (req: Request, res: Response) => {
     price,
     stock: stock ?? 0,
     isActive: isActive ?? true,
+  });
+
+  await logActivity(req, {
+    action: 'product.created', 
+    targetType: 'product',
+    targetId: String(product._id),
+    metadata: { name: product.name, sku: product.sku },
   });
 
   res.status(201).json({ product: serializeProduct(product) });
@@ -131,6 +139,13 @@ export const deleteProduct = catchAsync(async (req: Request, res: Response) => {
   if (!product) {
     throw new AppError('Product not found', 404);
   }
+
+  await logActivity(req, {
+    action: 'product.deleted', 
+    targetType: 'product',
+    targetId: String(product._id),
+    metadata: { name: product.name, sku: product.sku },
+  });
 
   res.status(204).send();
 });

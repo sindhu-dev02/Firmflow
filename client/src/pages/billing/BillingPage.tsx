@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/billing/StatusBadge';
-import { formatMoney, formatDate } from '@/lib/format';
+import { formatMoney, formatDateTime } from '@/lib/format';
 
 export function BillingPage() {
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ export function BillingPage() {
         <CardContent className="flex flex-col gap-3">
           {subscription.status === 'trialing' && subscription.trialEndsAt && (
             <p className="text-sm text-muted-foreground">
-              Trial ends on <span className="font-medium text-foreground">{formatDate(subscription.trialEndsAt)}</span>
+              Trial ends on <span className="font-medium text-foreground">{formatDateTime(subscription.trialEndsAt)}</span>
             </p>
           )}
 
@@ -76,7 +76,7 @@ export function BillingPage() {
             <p className="text-sm text-muted-foreground">
               {subscription.cancelAtPeriodEnd ? 'Access ends on' : 'Renews on'}{' '}
               <span className="font-medium text-foreground">
-                {formatDate(subscription.currentPeriodEnd)}
+                {formatDateTime(subscription.currentPeriodEnd)}
               </span>
             </p>
           )}
@@ -163,7 +163,7 @@ export function BillingPage() {
                 {invoiceData.invoices.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-muted/50">
                     <td className="px-4 py-3 text-sm text-foreground">
-                      {formatDate(invoice.createdAt)}
+                      {formatDateTime(invoice.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {formatMoney(invoice.amount, invoice.currency)}

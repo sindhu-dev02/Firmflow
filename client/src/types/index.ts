@@ -146,3 +146,13 @@ export interface ProductsResponse {
     pages: number;
   };
 }
+
+export interface ActivityLogEntry {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  metadata: Record<string, unknown>;
+  actor: { id: string; name: string; email: string } | null;
+  createdAt: string;
+}
