@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../src/app';
 import { Product } from '../src/modules/product/product.model';
-import { makeToken, makeOrgAndUsers } from './helpers';
+import { makeToken, makeOrgAndUsers, seedTestUsers } from './helpers';
 
 describe('Product API', () => {
   let ctx: ReturnType<typeof makeOrgAndUsers>;
@@ -10,8 +10,9 @@ describe('Product API', () => {
   let customerToken: string;
   let otherOrgToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ctx = makeOrgAndUsers();
+    await seedTestUsers([ctx.owner, ctx.customer, ctx.otherOrgOwner]);
     ownerToken = makeToken(ctx.owner);
     customerToken = makeToken(ctx.customer);
     otherOrgToken = makeToken(ctx.otherOrgOwner);

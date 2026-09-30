@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { Types } from 'mongoose';
+import { seedTestUsers } from './helpers';
 
 const mockSubscriptionsCreate = vi.fn();
 const mockSubscriptionsCancel = vi.fn();
@@ -53,8 +54,9 @@ describe('Subscription API', () => {
   let ownerToken: string;
   let employeeToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ctx = makeOrgAndUsers();
+    await seedTestUsers([ctx.owner, ctx.employee]);
     ownerToken = makeToken(ctx.owner);
     employeeToken = makeToken(ctx.employee);
     mockSubscriptionsCreate.mockReset();

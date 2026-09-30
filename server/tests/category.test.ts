@@ -3,15 +3,16 @@ import request from 'supertest';
 import app from '../src/app';
 import { Category } from '../src/modules/category/category.model';
 import { Product } from '../src/modules/product/product.model';
-import { makeToken, makeOrgAndUsers } from './helpers';
+import { makeToken, makeOrgAndUsers, seedTestUsers } from './helpers';
 
 describe('Category API', () => {
   let ctx: ReturnType<typeof makeOrgAndUsers>;
   let ownerToken: string;
   let customerToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ctx = makeOrgAndUsers();
+    await seedTestUsers([ctx.owner, ctx.customer]);
     ownerToken = makeToken(ctx.owner);
     customerToken = makeToken(ctx.customer);
   });

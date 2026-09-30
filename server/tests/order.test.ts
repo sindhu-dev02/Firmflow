@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../src/app';
 import { Product } from '../src/modules/product/product.model';
-import { makeToken, makeOrgAndUsers } from './helpers';
+import { makeToken, makeOrgAndUsers, seedTestUsers } from './helpers';
 import { Address } from '../src/modules/address/address.model';
 
 describe('Order API', () => {
@@ -10,8 +10,9 @@ describe('Order API', () => {
   let ownerToken: string;
   let customerToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ctx = makeOrgAndUsers();
+    await seedTestUsers([ctx.owner, ctx.customer]);
     ownerToken = makeToken(ctx.owner);
     customerToken = makeToken(ctx.customer);
   });

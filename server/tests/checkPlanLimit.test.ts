@@ -5,14 +5,15 @@ import { Plan } from '../src/modules/plan/plan.model';
 import { Subscription } from '../src/modules/subscription/subscription.model';
 import { Product } from '../src/modules/product/product.model';
 import { User } from '../src/modules/users/user.model';
-import { makeToken, makeOrgAndUsers } from './helpers';
+import { makeToken, makeOrgAndUsers, seedTestUsers } from './helpers';
 
 describe('checkPlanLimit middleware', () => {
   let ctx: ReturnType<typeof makeOrgAndUsers>;
   let ownerToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ctx = makeOrgAndUsers();
+    await seedTestUsers([ctx.owner]);
     ownerToken = makeToken(ctx.owner);
   });
 

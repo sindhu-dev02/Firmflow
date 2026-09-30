@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../src/app';
 import { Address } from '../src/modules/address/address.model';
-import { makeToken, makeOrgAndUsers } from './helpers';
+import { makeToken, makeOrgAndUsers, seedTestUsers } from './helpers';
 
 describe('Address API', () => {
   let ctx: ReturnType<typeof makeOrgAndUsers>;
@@ -16,8 +16,9 @@ describe('Address API', () => {
     country: 'USA',
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ctx = makeOrgAndUsers();
+    await seedTestUsers([ctx.owner, ctx.customer, ctx.employee]);
     ownerToken = makeToken(ctx.owner);
     customerToken = makeToken(ctx.customer);
   });

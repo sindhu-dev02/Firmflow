@@ -19,9 +19,11 @@ import subscriptionRoutes from './modules/subscription/subscription.routes';
 import webhookRoutes from './modules/webhook/webhook.routes';
 import invoiceRoutes from './modules/invoice/invoice.routes';
 import activityLogRoutes from './modules/activityLog/activityLog.routes';
-
+import { authLimiter, generalLimiter } from './middlewares/rateLimiters';
 
 const app = express();
+
+app.set('trust proxy', 1);
 
 app.use(
   cors({
@@ -31,7 +33,10 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 app.use(helmet());
+
+app.use('/api', generalLimiter);
 
 // Must come BEFORE express.json() below — signature verification needs the
 // exact raw bytes Razorpay sent. If express.json() ran first, it would
@@ -55,6 +60,8 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/organizations", organizationRoutes);
 app.use("/api/users", userRoutes);

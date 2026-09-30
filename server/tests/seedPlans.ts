@@ -10,8 +10,8 @@
  * The free plan never gets a razorpayPlanId — it's never charged.
  */
 import mongoose from 'mongoose';
-import { env } from "../config/env";
-import { Plan } from '../modules/plan/plan.model';
+import { env } from "../src/config/env";
+import { Plan } from '../src/modules/plan/plan.model';
 
 type SeedPlan = {
   name: string;
