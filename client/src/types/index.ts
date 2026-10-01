@@ -24,18 +24,36 @@ export interface AuthResponse {
   mustChangePassword: boolean;
 }
 
-// Matches GET /organizations/dashboard exactly:
-// { organization: { id, name, slug }, stats: { memberCount, createdAt } }
-export interface DashboardData {
-  organization: {
+export interface DashboardBusiness {
+  counts: {
+    products: number;
+    activeProducts: number;
+    customers: number;
+    orders: number;
+    pendingOrders: number;
+  };
+  totalRevenue: number; // paise
+  last7Days: { date: string; revenue: number; orders: number }[];
+  recentOrders: {
     id: string;
-    name: string;
-    slug: string;
-  };
-  stats: {
-    memberCount: number;
+    status: 'pending' | 'confirmed' | 'fulfilled' | 'cancelled';
+    totalAmount: number;
+    itemCount: number;
     createdAt: string;
+  }[];
+  lowStock: { id: string; name: string; sku: string; stock: number }[];
+  usage: {
+    planName: string | null;
+    products: { used: number; limit: number }; // limit -1 = unlimited
+    employees: { used: number; limit: number };
   };
+}
+
+// `business` is only sent to the owner and employees, not customers
+export interface DashboardData {
+  organization: { id: string; name: string; slug: string };
+  stats: { memberCount: number; createdAt: string };
+  business?: DashboardBusiness;
 }
 
 // Generic shape for your backend's error responses (AppError-based)
