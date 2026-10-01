@@ -135,4 +135,40 @@ describe('Category API', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('shows how many products use each category', async () => {
+    const category = await Category.create({ organizationId: ctx.organizationId, name: 'Counted' });
+    await Product.create([
+      { organizationId: ctx.organizationId, name: 'A', sku: 'CNT-1', price: 100, stock: 1, categoryId: category._id },
+      { organizationId: ctx.organizationId, name: 'B', sku: 'CNT-2', price: 100, stock: 1, categoryId: category._id },
+      { organizationId: ctx.organizationId, name: 'C', sku: 'CNT-3', price: 100, stock: 1 },
+    ]);
+
+    const res = await request(app)
+      .get('/api/categories')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.categories[0].productCount).toBe(2);
+  });
+
+  it('removes the category from a product when categoryId is null', async () => {
+    const category = await Category.create({ organizationId: ctx.organizationId, name: 'Temp' });
+    const product = await Product.create({
+      organizationId: ctx.organizationId,
+      name: 'Widget',
+      sku: 'CLR-1',
+      price: 500,
+      stock: 5,
+      categoryId: category._id,
+    });
+
+    const res = await request(app)
+      .patch(`/api/products/${product._id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ categoryId: null });
+
+    expect(res.status).toBe(200);
+    expect(res.body.product.categoryId).toBeNull();
+  });
 });

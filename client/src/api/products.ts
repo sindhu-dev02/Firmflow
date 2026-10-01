@@ -15,6 +15,7 @@ export interface ProductPayload {
   price: number; // paise/cents — integer
   stock?: number;
   isActive?: boolean;
+  categoryId?: string | null; // null = no category
 }
 
 export const productsApi = {

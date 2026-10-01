@@ -174,3 +174,48 @@ export interface ActivityLogEntry {
   actor: { id: string; name: string; email: string } | null;
   createdAt: string;
 }
+
+// --- Orders ---
+
+export type OrderStatus = 'pending' | 'confirmed' | 'fulfilled' | 'cancelled';
+
+export interface OrderItem {
+  productId: string;
+  nameSnapshot: string;
+  unitPriceSnapshot: number; // paise
+  quantity: number;
+  lineTotal: number; // paise
+}
+
+export interface Order {
+  id: string;
+  organizationId: string;
+  customerId: string;
+  createdBy: string;
+  items: OrderItem[];
+  status: OrderStatus;
+  totalAmount: number; // paise
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrdersResponse {
+  orders: Order[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// --- Categories ---
+
+export interface Category {
+  id: string;
+  organizationId: string;
+  name: string;
+  productCount: number;
+  createdAt: string;
+  updatedAt: string;
+}

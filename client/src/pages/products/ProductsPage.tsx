@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useProducts, useCreateProduct } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 import {
   productsApi,
   type ProductPayload,
@@ -25,6 +26,7 @@ const productSchema = z.object({
     .min(0, 'Price must be 0 or greater'),
   stock: z.number().int().min(0, 'Stock must be 0 or greater'),
   isActive: z.boolean(),
+  categoryId: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -33,6 +35,9 @@ export function ProductsPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useProducts();
+  const { data: categoriesData } = useCategories();
+  const categories = categoriesData?.categories ?? [];
+  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
   const createProduct = useCreateProduct();
 
   const updateProduct = useMutation({
@@ -41,7 +46,7 @@ export function ProductsPage() {
       payload,
     }: {
       id: string;
-      payload: ProductPayload;
+      payload: Partial<ProductPayload>;
     }) => productsApi.update(id, payload),
 
     onError: (error) => {
@@ -87,6 +92,7 @@ export function ProductsPage() {
       price: 0,
       stock: 0,
       isActive: true,
+      categoryId: '',
     },
   });
 
@@ -98,6 +104,7 @@ export function ProductsPage() {
       price: values.price,
       stock: values.stock,
       isActive: values.isActive,
+      categoryId: values.categoryId || undefined,
     };
 
     createProduct.mutate(payload, {
@@ -225,6 +232,10 @@ export function ProductsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                    Category
+                  </th>
+
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Price
                   </th>
 
@@ -259,6 +270,32 @@ export function ProductsPage() {
 
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {product.sku}
+                      </td>
+
+                      <td className="px-4 py-3 text-sm">
+                        <select
+                          aria-label={`Category for ${product.name}`}
+                          className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                          value={
+                            product.categoryId && categoryNames.has(product.categoryId)
+                              ? product.categoryId
+                              : ''
+                          }
+                          disabled={updateProduct.isPending}
+                          onChange={(e) =>
+                            updateProduct.mutate({
+                              id: product.id,
+                              payload: { categoryId: e.target.value || null },
+                            })
+                          }
+                        >
+                          <option value="">No category</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
 
                       <td className="px-4 py-3 text-sm text-foreground">
@@ -362,6 +399,27 @@ export function ProductsPage() {
             error={errors.stock?.message}
             {...register('stock', { valueAsNumber: true })}
           />
+
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="categoryId"
+              className="text-sm font-medium text-foreground"
+            >
+              Category (optional)
+            </label>
+            <select
+              id="categoryId"
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
+              {...register('categoryId')}
+            >
+              <option value="">No category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="flex items-center gap-3">
             <input

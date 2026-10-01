@@ -12,6 +12,8 @@ import { BillingPage } from '@/pages/billing/BillingPage';
 import { PricingPage } from '@/pages/billing/PricingPage';
 import { ProductsPage } from '@/pages/products/ProductsPage';
 import { ActivityLogPage } from '@/pages/activity/ActivityLogPage';
+import { OrdersPage } from '@/pages/orders/OrdersPage';
+import { CategoriesPage } from '@/pages/categories/CategoriesPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -40,6 +42,8 @@ export const router = createBrowserRouter([
               { path: '/billing', element: <BillingPage /> },
               { path: '/billing/plans', element: <PricingPage /> },
               { path: '/products', element: <ProductsPage /> },
+              { path: '/orders', element: <OrdersPage /> },
+              { path: '/categories', element: <CategoriesPage /> },
             ],
           },
 

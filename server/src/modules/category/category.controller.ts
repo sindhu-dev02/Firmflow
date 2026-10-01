@@ -4,6 +4,7 @@ import { Product } from '../product/product.model';
 import { serializeCategory } from './category.serializer';
 import { catchAsync } from '../../shared/utils/catchAsync';
 import { AppError } from '../../middlewares/errorHandler';
+import { Types } from 'mongoose';
 
 export const createCategory = catchAsync(async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
@@ -21,7 +22,20 @@ export const createCategory = catchAsync(async (req: Request, res: Response) => 
 export const listCategories = catchAsync(async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
   const categories = await Category.find({ organizationId }).sort({ name: 1 });
-  res.status(200).json({ categories: categories.map(serializeCategory) });
+
+  // How many products use each category
+  const counts = await Product.aggregate([
+    { $match: { organizationId: new Types.ObjectId(organizationId), categoryId: { $exists: true, $ne: null } } },
+    { $group: { _id: '$categoryId', count: { $sum: 1 } } },
+  ]);
+  const countById = new Map<string, number>(counts.map((c) => [String(c._id), c.count]));
+
+  res.status(200).json({
+    categories: categories.map((c) => ({
+      ...serializeCategory(c),
+      productCount: countById.get(c._id.toString()) ?? 0,
+    })),
+  });
 });
 
 export const updateCategory = catchAsync(async (req: Request, res: Response) => {
