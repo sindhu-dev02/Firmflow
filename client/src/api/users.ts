@@ -1,7 +1,6 @@
 import { apiClient } from '@/api/axios';
 import type { User } from '@/types';
 //import { axiosClient } from '@/api/axios';
-import type { TeamMember } from '@/types/team';
 
 export interface UpdateProfilePayload {
   name?: string;

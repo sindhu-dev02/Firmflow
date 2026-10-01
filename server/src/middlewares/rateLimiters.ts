@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: () => process.env.NODE_ENV === 'test' && process.env.TEST_RATE_LIMIT !== 'on',
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -17,7 +17,7 @@ export const authLimiter = rateLimit({
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
-  skip: () => process.env.NODE_ENV === 'test',
+  skip: () => process.env.NODE_ENV === 'test' && process.env.TEST_RATE_LIMIT !== 'on',
   standardHeaders: true,
   legacyHeaders: false,
   message: {
