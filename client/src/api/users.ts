@@ -39,4 +39,8 @@ export const usersApi = {
     const { data } = await apiClient.patch<{ user: User }>(`/users/${id}/reactivate`);
     return data;
   },
+  deleteUser: async (id: string) => {
+    const { data } = await apiClient.delete<{ id: string }>(`/users/${id}`);
+    return data;
+  },
 };

@@ -13,6 +13,8 @@ function describeActivity(log: ActivityLogEntry): string {
       return `${actor} deactivated ${targetName ?? 'a team member'}`;
     case 'user.reactivated':
       return `${actor} reactivated ${targetName ?? 'a team member'}`;
+    case 'user.deleted':
+      return `${actor} deleted ${targetName ?? 'a team member'}`;
     case 'product.created':
       return `${actor} created product "${targetName ?? 'Unknown'}"`;
     case 'product.deleted':

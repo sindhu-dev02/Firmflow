@@ -6,6 +6,7 @@ import { serializeUser } from "../../shared/utils/serializeUser";
 import { tenantFilter } from "../../shared/helpers/tenantFilter";
 import { hashPassword } from "../../shared/utils/password";
 import { logActivity } from "../../shared/utils/logActivity";
+import { Order } from "../order/order.model";
 
 export const getProfile = catchAsync(async (req: Request, res: Response) => {
   const user = await User.findById(req.user!.userId);
@@ -155,4 +156,48 @@ export const reactivateUser = catchAsync(async (req: Request, res: Response) => 
     success: true,
     data: { user: serializeUser(targetUser) },
   });
+});
+
+export const deleteUser = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const currentUserId = req.user!.userId;
+  const organizationId = req.user!.organizationId;
+
+  if (id === currentUserId) {
+    throw new AppError("You cannot delete your own account", 400);
+  }
+
+  const targetUser = await User.findOne({ _id: id, organizationId });
+  if (!targetUser) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (targetUser.role === "org_owner") {
+    throw new AppError("You cannot delete an organization owner", 403);
+  }
+
+  if (targetUser.isActive) {
+    throw new AppError("Deactivate this person first, then delete", 400);
+  }
+
+  if (targetUser.role === "customer") {
+    const hasOrders = await Order.exists({ organizationId, customerId: targetUser._id });
+    if (hasOrders) {
+      throw new AppError(
+        "This customer has orders, so they cannot be deleted. Keep them deactivated instead.",
+        409
+      );
+    }
+  }
+
+  await targetUser.deleteOne();
+
+  await logActivity(req, {
+    action: "user.deleted",
+    targetType: "user",
+    targetId: String(targetUser._id),
+    metadata: { name: targetUser.name, role: targetUser.role },
+  });
+
+  res.status(200).json({ success: true, data: { id: String(targetUser._id) } });
 });

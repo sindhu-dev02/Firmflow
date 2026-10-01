@@ -5,7 +5,8 @@ import {
   listOrgUsers, 
   inviteUser, 
   deactivateUser, 
-  reactivateUser 
+  reactivateUser,
+  deleteUser
 } from "./user.controller";
 import { authenticate } from "../../middlewares/authenticate";
 import { validate } from "../../middlewares/validate";
@@ -45,5 +46,7 @@ router.patch(
   authorize("org_owner"),
   reactivateUser
 );
+
+router.delete("/:id", requireTenant, authorize("org_owner"), deleteUser);
 
 export default router;

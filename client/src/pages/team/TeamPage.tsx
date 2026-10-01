@@ -80,6 +80,24 @@ function useInviteUser() {
   });
 }
 
+function useDeleteUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => usersApi.deleteUser(id),
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Could not delete this member'));
+    },
+    onSuccess: () => {
+      toast.success('Member deleted');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['team'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
 function useToggleUserStatus() {
   const queryClient = useQueryClient();
 
@@ -103,6 +121,7 @@ export function TeamPage() {
   const { data, isLoading, isError } = useTeam();
   const inviteUser = useInviteUser();
   const toggleStatus = useToggleUserStatus();
+  const deleteMember = useDeleteUser();
   const currentUser = useAuthStore((s) => s.user);
   const canManageTeam = currentUser?.role === 'org_owner';
 
@@ -204,7 +223,7 @@ export function TeamPage() {
                         {canManageTeam && (
                           <td className="px-4 py-3">
                             {member.role !== 'org_owner' && (
-                              <div className="flex justify-end">
+                              <div className="flex justify-end gap-2">
                                 <Button
                                   type="button"
                                   variant="outline"
@@ -216,6 +235,22 @@ export function TeamPage() {
                                 >
                                   {member.isActive ? 'Deactivate' : 'Reactivate'}
                                 </Button>
+                                
+                                {!member.isActive && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive"
+                                    isLoading={deleteMember.isPending}
+                                    onClick={() => {
+                                      const ok = window.confirm(`Delete ${member.name} for good? This cannot be undone.`);
+                                      if (ok) deleteMember.mutate(member.id);
+                                    }}
+                                  >
+                                    Delete
+                                  </Button>
+                                )}
                               </div>
                             )}
                           </td>
