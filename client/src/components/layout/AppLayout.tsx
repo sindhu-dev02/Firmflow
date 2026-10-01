@@ -1,146 +1,196 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { Menu, ChevronsLeft, X, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useLogout } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { CommandPalette  } from '@/components/ui/CommandPalette';
-import { LayoutDashboard, Users, User, CreditCard, Menu, ChevronsLeft, X, Package, History, ShoppingCart, Tags, Contact } from 'lucide-react';
+import { CommandPalette } from '@/components/ui/CommandPalette';
+import { getVisibleGroups, getPageTitle, isPathActive } from './navItems';
 
-const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['org_owner', 'employee', 'customer'] },
-  { to: '/team', label: 'Team', icon: Users, roles: ['org_owner', 'employee'] },
-  { to: '/billing', label: 'Billing', icon: CreditCard, roles: ['org_owner', 'employee'] },
-  { to: '/products', label: 'Products', icon: Package, roles: ['org_owner','employee' ] },
-  { to: '/categories', label: 'Categories', icon: Tags, roles: ['org_owner', 'employee'] },
-  { to: '/customers', label: 'Customers', icon: Contact, roles: ['org_owner', 'employee'] },
-  { to: '/orders', label: 'Orders', icon: ShoppingCart, roles: ['org_owner', 'employee'] },
-  { to: '/activity', label: 'Activity', icon: History, roles: ['org_owner'] },
-  { to: '/profile', label: 'Profile', icon: User, roles: ['org_owner', 'employee', 'customer', 'super_admin'] },
-];
+const COLLAPSE_KEY = 'firmflow-sidebar-collapsed';
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/team': 'Team',
-  '/billing': 'Billing',
-  '/billing/plans': 'Plans & Pricing',
-  '/products': 'Products',
-  '/categories': 'Categories',
-  '/customers': 'Customers',
-  '/orders': 'Orders',
-  '/activity': 'Activity',
-  '/profile': 'Profile',
-};
+function Logo({ showName }: { showName: boolean }) {
+  return (
+    <>
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
+        F
+      </span>
+      {showName && (
+        <span className="whitespace-nowrap text-lg font-bold text-foreground">FirmFlow</span>
+      )}
+    </>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold uppercase text-primary ring-1 ring-inset ring-primary/20">
+      {name.trim().charAt(0) || '?'}
+    </span>
+  );
+}
+
+// The menu list. Used by both the desktop sidebar and the phone drawer.
+function SidebarNav({
+  id,
+  collapsed,
+  onNavigate,
+}: {
+  id: string;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const user = useAuthStore((s) => s.user);
+  const { pathname } = useLocation();
+  const groups = getVisibleGroups(user?.role);
+
+  return (
+    <LayoutGroup id={id}>
+      <nav aria-label="Main menu" className="flex-1 overflow-y-auto p-3">
+        {groups.map((group, index) => (
+          <div key={group.label ?? 'main'} className={index === 0 ? '' : 'mt-4'}>
+            {group.label &&
+              (collapsed ? (
+                <div className="mx-3 mb-2 border-t border-border" />
+              ) : (
+                <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  {group.label}
+                </p>
+              ))}
+
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const isActive = isPathActive(pathname, item.to);
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={onNavigate}
+                    title={collapsed ? item.label : undefined}
+                    aria-label={item.label}
+                    className="relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="active-nav-pill"
+                        className="absolute inset-0 rounded-md bg-primary/10 ring-1 ring-inset ring-primary/20"
+                        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                      />
+                    )}
+                    <item.icon
+                      size={18}
+                      strokeWidth={2}
+                      className={`relative shrink-0 ${isActive ? 'text-primary' : ''}`}
+                    />
+                    {!collapsed && (
+                      <span className={`relative whitespace-nowrap ${isActive ? 'text-foreground' : ''}`}>
+                        {item.label}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+    </LayoutGroup>
+  );
+}
+
+// Name, role and log out button at the bottom of the menu
+function SidebarUser({ collapsed, onBeforeLogout }: { collapsed: boolean; onBeforeLogout?: () => void }) {
+  const user = useAuthStore((s) => s.user);
+  const logout = useLogout();
+  if (!user) return null;
+
+  return (
+    <div className={`flex items-center gap-2 ${collapsed ? 'flex-col' : ''}`}>
+      <Link to="/profile" onClick={onBeforeLogout} title="Your profile" className="shrink-0">
+        <Avatar name={user.name} />
+      </Link>
+      {!collapsed && (
+        <div className="min-w-0 flex-1 text-sm">
+          <p className="truncate font-medium text-foreground">{user.name}</p>
+          <p className="truncate text-xs capitalize text-muted-foreground">
+            {user.role.replace('_', ' ')}
+          </p>
+        </div>
+      )}
+      <button
+        type="button"
+        title="Log out"
+        aria-label="Log out"
+        disabled={logout.isPending}
+        onClick={() => {
+          onBeforeLogout?.();
+          logout.mutate();
+        }}
+        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+      >
+        <LogOut size={18} />
+      </button>
+    </div>
+  );
+}
 
 export function AppLayout() {
   const user = useAuthStore((s) => s.user);
-  const logout = useLogout();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const visibleItems = NAV_ITEMS.filter((item) => user && item.roles.includes(user.role));
-  const pageTitle = PAGE_TITLES[location.pathname] ?? 'FirmFlow';
+  // Remember the sidebar choice
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+    } catch {
+      /* storage not available, that's fine */
+    }
+  }, [collapsed]);
+
+  const pageTitle = getPageTitle(location.pathname);
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
+    <div className="flex h-dvh bg-background">
+      {/* Desktop sidebar */}
       <motion.aside
         animate={{ width: collapsed ? 72 : 240 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="hidden flex-col border-r border-border bg-card md:flex"
+        className="hidden shrink-0 flex-col border-r border-border bg-card md:flex"
       >
-        <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        <div className="flex h-14 items-center border-b border-border px-4">
           <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-              F
-            </span>
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="whitespace-nowrap text-lg font-bold text-foreground"
-                >
-                  FirmFlow
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <Logo showName={!collapsed} />
           </Link>
         </div>
 
-        <LayoutGroup>
-          <nav className="flex-1 space-y-1 p-3">
-            {visibleItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.to);
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className="relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="active-nav-pill"
-                      className="absolute inset-0 rounded-md bg-primary/10 ring-1 ring-inset ring-primary/20"
-                      transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                    />
-                  )}
-                  <item.icon
-                    size={18}
-                    strokeWidth={2}
-                    className={`relative shrink-0 ${isActive ? 'text-primary' : ''}`}
-                  />
-                  <AnimatePresence>
-                    {!collapsed && (
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className={`relative whitespace-nowrap ${isActive ? 'text-foreground' : ''}`}
-                      >
-                        {item.label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </NavLink>
-              );
-            })}
-          </nav>
-        </LayoutGroup>
+        <SidebarNav id="desktop" collapsed={collapsed} />
 
         <div className="border-t border-border p-3">
           <button
+            type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="mb-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted"
+            aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
+            className="mb-3 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted"
           >
             <motion.span animate={{ rotate: collapsed ? 180 : 0 }}>
               <ChevronsLeft size={16} />
             </motion.span>
             {!collapsed && 'Collapse'}
           </button>
-
-          {user && !collapsed && (
-            <div className="mb-2 text-sm">
-              <p className="font-medium text-foreground">{user.name}</p>
-              <p className="capitalize text-muted-foreground">{user.role.replace('_', ' ')}</p>
-            </div>
-          )}
-
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() => logout.mutate()}
-            isLoading={logout.isPending}
-          >
-            {collapsed ? '↩' : 'Log out'}
-          </Button>
+          <SidebarUser collapsed={collapsed} />
         </div>
       </motion.aside>
 
-      {/* Mobile drawer */}
+      {/* Phone drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -164,10 +214,7 @@ export function AppLayout() {
                   className="flex items-center gap-2"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-                    F
-                  </span>
-                  <span className="text-lg font-bold text-foreground">FirmFlow</span>
+                  <Logo showName />
                 </Link>
                 <button
                   type="button"
@@ -179,45 +226,10 @@ export function AppLayout() {
                 </button>
               </div>
 
-              <nav className="flex-1 space-y-1 p-3">
-                {visibleItems.map((item) => {
-                  const isActive = location.pathname.startsWith(item.to);
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-primary/10 text-primary ring-1 ring-inset ring-primary/20'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <item.icon size={18} strokeWidth={2} className="shrink-0" />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  );
-                })}
-              </nav>
+              <SidebarNav id="mobile" collapsed={false} onNavigate={() => setMobileOpen(false)} />
 
               <div className="border-t border-border p-3">
-                {user && (
-                  <div className="mb-2 text-sm">
-                    <p className="font-medium text-foreground">{user.name}</p>
-                    <p className="capitalize text-muted-foreground">{user.role.replace('_', ' ')}</p>
-                  </div>
-                )}
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => {
-                    setMobileOpen(false);
-                    logout.mutate();
-                  }}
-                  isLoading={logout.isPending}
-                >
-                  Log out
-                </Button>
+                <SidebarUser collapsed={false} onBeforeLogout={() => setMobileOpen(false)} />
               </div>
             </motion.aside>
           </>
@@ -226,7 +238,7 @@ export function AppLayout() {
 
       {/* Main section */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -242,34 +254,30 @@ export function AppLayout() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <kbd className="hidden items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:flex">
-              ⌘K
+              Ctrl K
             </kbd>
             {user && (
-              <>
-                <div className="h-6 w-px bg-border" />
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-medium text-foreground">{user.name}</p>
-                  <p className="text-xs capitalize text-muted-foreground">
-                    {user.role.replace('_', ' ')}
-                  </p>
-                </div>
-              </>
+              <Link to="/profile" title={`${user.name} · your profile`} className="md:hidden">
+                <Avatar name={user.name} />
+              </Link>
             )}
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="mx-auto w-full max-w-7xl">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </main>
       </div>
       <CommandPalette />

@@ -173,7 +173,7 @@ export function TeamPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>

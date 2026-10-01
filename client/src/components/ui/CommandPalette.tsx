@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Command } from 'cmdk';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Users, User, Sun, Moon, Monitor, LogOut } from 'lucide-react';
+import { User, Sun, Moon, Monitor, LogOut } from 'lucide-react';
+import { getVisibleGroups } from '@/components/layout/navItems';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useLogout } from '@/hooks/useAuth';
@@ -15,7 +16,9 @@ export function CommandPalette() {
   const setTheme = useThemeStore((s) => s.setTheme);
   const logout = useLogout();
   const canSeeTeam = user?.role === 'org_owner' || user?.role === 'employee';
+  const pages = getVisibleGroups(user?.role).flatMap((g) => g.items);
   const { data: teamData } = useTeam(canSeeTeam);
+  const staff = (teamData?.users ?? []).filter((u) => u.role !== 'customer');
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -62,31 +65,21 @@ export function CommandPalette() {
                 </Command.Empty>
 
                 <Command.Group heading="Navigate" className="text-xs font-medium text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5">
-                  <Command.Item
-                    onSelect={() => go('/dashboard')}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground data-[selected=true]:bg-muted"
-                  >
-                    <LayoutDashboard size={16} /> Dashboard
-                  </Command.Item>
-                  {canSeeTeam && (
+                  {pages.map((page) => (
                     <Command.Item
-                      onSelect={() => go('/team')}
+                      key={page.to}
+                      value={page.label}
+                      onSelect={() => go(page.to)}
                       className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground data-[selected=true]:bg-muted"
                     >
-                      <Users size={16} /> Team
+                      <page.icon size={16} /> {page.label}
                     </Command.Item>
-                  )}
-                  <Command.Item
-                    onSelect={() => go('/profile')}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground data-[selected=true]:bg-muted"
-                  >
-                    <User size={16} /> Profile
-                  </Command.Item>
+                  ))}
                 </Command.Group>
 
-                                {canSeeTeam && teamData?.users && teamData.users.length > 0 && (
+                                {canSeeTeam && staff.length > 0 && (
                   <Command.Group heading="Team" className="text-xs font-medium text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5">
-                    {teamData.users.map((member) => (
+                    {staff.map((member) => (
                       <Command.Item
                         key={member.id}
                         value={`${member.name} ${member.email}`}
