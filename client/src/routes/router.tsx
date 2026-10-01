@@ -14,6 +14,7 @@ import { ProductsPage } from '@/pages/products/ProductsPage';
 import { ActivityLogPage } from '@/pages/activity/ActivityLogPage';
 import { OrdersPage } from '@/pages/orders/OrdersPage';
 import { CategoriesPage } from '@/pages/categories/CategoriesPage';
+import { CustomersPage } from '@/pages/customers/CustomersPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
               { path: '/products', element: <ProductsPage /> },
               { path: '/orders', element: <OrdersPage /> },
               { path: '/categories', element: <CategoriesPage /> },
+              { path: '/customers', element: <CustomersPage /> },
             ],
           },
 

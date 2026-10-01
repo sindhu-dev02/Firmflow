@@ -118,7 +118,11 @@ function useToggleUserStatus() {
 }
 
 export function TeamPage() {
-  const { data, isLoading, isError } = useTeam();
+  const { data: allData, isLoading, isError } = useTeam();
+  // Customers have their own page, so the Team page shows staff only
+  const data = allData
+    ? { ...allData, users: allData.users.filter((u) => u.role !== 'customer') }
+    : undefined;
   const inviteUser = useInviteUser();
   const toggleStatus = useToggleUserStatus();
   const deleteMember = useDeleteUser();
@@ -286,7 +290,6 @@ export function TeamPage() {
               {...register('role')}
             >
               <option value="employee">Employee</option>
-              <option value="customer">Customer</option>
             </select>
           </div>
 

@@ -7,6 +7,7 @@ import { tenantFilter } from "../../shared/helpers/tenantFilter";
 import { hashPassword } from "../../shared/utils/password";
 import { logActivity } from "../../shared/utils/logActivity";
 import { Order } from "../order/order.model";
+import { Types } from "mongoose";
 
 export const getProfile = catchAsync(async (req: Request, res: Response) => {
   const user = await User.findById(req.user!.userId);
@@ -201,3 +202,40 @@ export const deleteUser = catchAsync(async (req: Request, res: Response) => {
 
   res.status(200).json({ success: true, data: { id: String(targetUser._id) } });
 });
+
+  export const listCustomers = catchAsync(async (req: Request, res: Response) => {
+    const organizationId = req.user!.organizationId!;
+
+    const customers = await User.find({ organizationId, role: "customer" }).sort({ createdAt: -1 });
+
+    const stats = await Order.aggregate([
+      { $match: { organizationId: new Types.ObjectId(organizationId) } },
+      {
+        $group: {
+          _id: "$customerId",
+          orderCount: { $sum: 1 },
+          totalSpent: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 0, "$totalAmount"] },
+          },
+          lastOrderAt: { $max: "$createdAt" },
+        },
+      },
+    ]);
+    const statsById = new Map(stats.map((s) => [String(s._id), s]));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        customers: customers.map((c) => {
+          const st = statsById.get(String(c._id));
+          return {
+            ...serializeUser(c),
+            createdAt: c.createdAt,
+            orderCount: st?.orderCount ?? 0,
+            totalSpent: st?.totalSpent ?? 0,
+            lastOrderAt: st?.lastOrderAt ?? null,
+          };
+        }),
+      },
+    });
+  });

@@ -28,7 +28,7 @@ export const getDashboardSummary = catchAsync(async (req: Request, res: Response
 
   const [organization, memberCount] = await Promise.all([
     Organization.findById(organizationId),
-    User.countDocuments({ organizationId }),
+    User.countDocuments({ organizationId, role: { $ne: "customer" } }),
   ]);
 
   if (!organization) {

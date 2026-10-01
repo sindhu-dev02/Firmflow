@@ -6,7 +6,7 @@ import { useLogout } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { CommandPalette  } from '@/components/ui/CommandPalette';
-import { LayoutDashboard, Users, User, CreditCard, Menu, ChevronsLeft, X, Package, History, ShoppingCart, Tags } from 'lucide-react';
+import { LayoutDashboard, Users, User, CreditCard, Menu, ChevronsLeft, X, Package, History, ShoppingCart, Tags, Contact } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['org_owner', 'employee', 'customer'] },
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/billing', label: 'Billing', icon: CreditCard, roles: ['org_owner', 'employee'] },
   { to: '/products', label: 'Products', icon: Package, roles: ['org_owner','employee' ] },
   { to: '/categories', label: 'Categories', icon: Tags, roles: ['org_owner', 'employee'] },
+  { to: '/customers', label: 'Customers', icon: Contact, roles: ['org_owner', 'employee'] },
   { to: '/orders', label: 'Orders', icon: ShoppingCart, roles: ['org_owner', 'employee'] },
   { to: '/activity', label: 'Activity', icon: History, roles: ['org_owner'] },
   { to: '/profile', label: 'Profile', icon: User, roles: ['org_owner', 'employee', 'customer', 'super_admin'] },
@@ -26,6 +27,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/billing/plans': 'Plans & Pricing',
   '/products': 'Products',
   '/categories': 'Categories',
+  '/customers': 'Customers',
   '/orders': 'Orders',
   '/activity': 'Activity',
   '/profile': 'Profile',

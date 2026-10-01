@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/axios';
-import type { User } from '@/types';
+import type { User, Customer } from '@/types';
 //import { axiosClient } from '@/api/axios';
 
 export interface UpdateProfilePayload {
@@ -41,6 +41,10 @@ export const usersApi = {
   },
   deleteUser: async (id: string) => {
     const { data } = await apiClient.delete<{ id: string }>(`/users/${id}`);
+    return data;
+  },
+  listCustomers: async () => {
+    const { data } = await apiClient.get<{ customers: Customer[] }>('/users/customers');
     return data;
   },
 };

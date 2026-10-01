@@ -6,7 +6,8 @@ import {
   inviteUser, 
   deactivateUser, 
   reactivateUser,
-  deleteUser
+  deleteUser,
+  listCustomers
 } from "./user.controller";
 import { authenticate } from "../../middlewares/authenticate";
 import { validate } from "../../middlewares/validate";
@@ -24,12 +25,18 @@ router.patch("/profile", validate(updateProfileSchema), updateProfile);
 
 router.get("/", requireTenant, authorize("org_owner", "employee"), listOrgUsers);
 
+router.get("/customers", requireTenant, authorize("org_owner", "employee"), listCustomers);
+
+// Only new employees use up a seat. Customers are free to add.
+const employeeSeatLimit = checkPlanLimit('employees');
+
 router.post(
   "/invite",
   requireTenant,
   authorize("org_owner", "employee"),
   validate(inviteUserSchema),
-  checkPlanLimit('employees'),
+  (req, res, next) =>
+    req.body.role === 'employee' ? employeeSeatLimit(req, res, next) : next(),
   inviteUser
 );
 

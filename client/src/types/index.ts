@@ -219,3 +219,12 @@ export interface Category {
   createdAt: string;
   updatedAt: string;
 }
+
+// --- Customers ---
+
+export interface Customer extends TeamMember {
+  createdAt: string;
+  orderCount: number;
+  totalSpent: number; // paise, cancelled orders not counted
+  lastOrderAt: string | null;
+}

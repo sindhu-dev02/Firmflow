@@ -228,8 +228,7 @@ export function OrdersPage() {
           <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
             {customers.length === 0 && (
               <p>
-                You need at least one customer first. Add one on the Team page (choose the
-                role “Customer”).
+                You need at least one customer first. Add one on the Customers page.
               </p>
             )}
             {products.length === 0 && (
