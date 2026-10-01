@@ -15,7 +15,7 @@
           var theme = stored && stored.state ? stored.state.theme : "system";
           var isDark =
             theme === "dark" ||
-            (theme === "system" &&
+            (theme === "system" && // theme === "light" for light theme on first load
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           if (isDark) document.documentElement.classList.add("dark");
         } catch (e) {}

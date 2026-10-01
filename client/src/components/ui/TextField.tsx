@@ -10,18 +10,18 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     const inputId = id ?? rest.name;
     return (
       <div className="flex flex-col gap-1">
-        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className="text-sm font-medium text-foreground">
           {label}
         </label>
         <input
           ref={ref}
           id={inputId}
-          className={`rounded-md border px-3 py-2 text-sm text-gray-900 shadow-sm outline-none transition focus:ring-2 focus:ring-brand-500 ${
-            error ? 'border-red-400' : 'border-gray-300'
+          className={`rounded-md border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:ring-2 focus:ring-ring ${
+            error ? 'border-destructive' : 'border-border'
           }`}
           {...rest}
         />
-        {error && <span className="text-xs text-red-500">{error}</span>}
+        {error && <span className="text-xs text-destructive">{error}</span>}
       </div>
     );
   },

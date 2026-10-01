@@ -38,12 +38,12 @@ export function CreateOrganizationPage() {
   const apiError = createOrg.error as AxiosError<ApiErrorPayload> | null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm">
+        <h1 className="mb-2 text-2xl font-bold text-foreground">
           Set up your organization
         </h1>
-        <p className="mb-6 text-sm text-gray-500">
+        <p className="mb-6 text-sm text-muted-foreground">
           You'll be the owner of this organization.
         </p>
 

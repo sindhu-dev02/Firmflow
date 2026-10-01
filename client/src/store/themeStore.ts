@@ -11,7 +11,7 @@ interface ThemeState {
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
   const resolved =
-    theme === "system"
+    theme === "system" //theme: "light", for light theme
       ? window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light"
