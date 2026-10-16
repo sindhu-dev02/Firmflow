@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,21 +11,36 @@ import {
   productsApi,
   type ProductPayload,
 } from '@/api/products';
+import { Plus, Package, SearchX } from 'lucide-react';
 import { TextField } from '@/components/ui/TextField';
+import { SelectField } from '@/components/ui/SelectField';
+import { Modal } from '@/components/ui/Modal';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { PageSkeleton } from '@/components/ui/Skeleton';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { Pagination } from '@/components/ui/Pagination';
+import { useDebounce } from '@/hooks/useDebounce';
 import { getErrorMessage } from '@/lib/errors';
 import { formatMoney } from '@/lib/format';
 import type { Product } from '@/types';
+import { useConfirm } from '@/hooks/useConfirm';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   sku: z.string().min(1, 'SKU is required'),
   description: z.string().optional(),
+  // typed in rupees (like 499 or 499.50); we turn it into paise before saving
   price: z
-    .number()
-    .int('Price must be a whole number (paise)')
-    .min(0, 'Price must be 0 or greater'),
-  stock: z.number().int().min(0, 'Stock must be 0 or greater'),
+    .number({ error: 'Enter a price' })
+    .min(0, 'Price must be 0 or greater')
+    .refine((v) => Math.abs(v * 100 - Math.round(v * 100)) < 1e-6, 'Use at most 2 decimal places'),
+  stock: z
+    .number({ error: 'Enter the stock' })
+    .int('Stock must be a whole number')
+    .min(0, 'Stock must be 0 or greater'),
   isActive: z.boolean(),
   categoryId: z.string().optional(),
 });
@@ -32,12 +48,23 @@ const productSchema = z.object({
 type ProductFormValues = z.infer<typeof productSchema>;
 
 export function ProductsPage() {
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError } = useProducts();
+  const [searchText, setSearchText] = useState('');
+  const [page, setPage] = useState(1);
+  const search = useDebounce(searchText.trim(), 300);
+  const PAGE_SIZE = 20;
+  const { data, isLoading, isError, refetch } = useProducts({
+    search: search || undefined,
+    page,
+    limit: PAGE_SIZE,
+  });
   const { data: categoriesData } = useCategories();
   const categories = categoriesData?.categories ?? [];
   const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const createProduct = useCreateProduct();
 
   const updateProduct = useMutation({
@@ -96,158 +123,206 @@ export function ProductsPage() {
     },
   });
 
+  const emptyForm: ProductFormValues = {
+    name: '',
+    sku: '',
+    description: '',
+    price: 0,
+    stock: 0,
+    isActive: true,
+    categoryId: '',
+  };
+
   const onSubmit = (values: ProductFormValues) => {
+    const price = Math.round(values.price * 100); // rupees -> paise
+
+    if (editingProduct) {
+      updateProduct.mutate(
+        {
+          id: editingProduct.id,
+          payload: {
+            name: values.name,
+            sku: values.sku,
+            description: values.description ?? '',
+            price,
+            stock: values.stock,
+            isActive: values.isActive,
+            categoryId: values.categoryId || null,
+          },
+        },
+        {
+          onSuccess: () => setFormOpen(false),
+        },
+      );
+      return;
+    }
+
     const payload: ProductPayload = {
       name: values.name,
       sku: values.sku,
       description: values.description || undefined,
-      price: values.price,
+      price,
       stock: values.stock,
       isActive: values.isActive,
       categoryId: values.categoryId || undefined,
     };
 
     createProduct.mutate(payload, {
-      onSuccess: () => {
-        reset();
-      },
+      onSuccess: () => setFormOpen(false),
     });
   };
 
+  // "Add product" button
+  const openCreate = () => {
+    setEditingProduct(null);
+    reset(emptyForm);
+    setFormOpen(true);
+  };
+
+  // "Edit" button: open the same window with this product filled in
   const handleEdit = (product: Product) => {
-    const name = window.prompt('Product name', product.name);
-    if (name === null) return;
-
-    const sku = window.prompt('SKU', product.sku);
-    if (sku === null) return;
-
-    const description = window.prompt(
-      'Description',
-      product.description ?? '',
-    );
-    if (description === null) return;
-
-    const priceInput = window.prompt(
-      'Price in paise',
-      String(product.price),
-    );
-    if (priceInput === null) return;
-
-    const stockInput = window.prompt(
-      'Stock',
-      String(product.stock),
-    );
-    if (stockInput === null) return;
-
-    const price = Number(priceInput);
-    const stock = Number(stockInput);
-
-    if (!Number.isFinite(price) || price < 0) {
-      toast.error('Price must be a valid non-negative number');
-      return;
-    }
-
-    if (!Number.isFinite(stock) || stock < 0) {
-      toast.error('Stock must be a valid non-negative number');
-      return;
-    }
-
-    const payload: ProductPayload = {
-      name,
-      sku,
-      description,
-      price,
-      stock: Math.floor(stock),
+    setEditingProduct(product);
+    reset({
+      name: product.name,
+      sku: product.sku,
+      description: product.description ?? '',
+      price: product.price / 100,
+      stock: product.stock,
       isActive: product.isActive,
-    };
-
-    updateProduct.mutate({
-      id: product.id,
-      payload,
+      categoryId: product.categoryId ?? '',
     });
+    setFormOpen(true);
   };
 
-  const handleDelete = (product: Product) => {
-    const confirmed = window.confirm(
-      `Delete "${product.name}"? This action cannot be undone.`,
-    );
+  const closeForm = () => setFormOpen(false);
 
-    if (!confirmed) return;
-
-    deleteProduct.mutate(product.id);
+  const handleDelete = async (product: Product) => {
+    const ok = await confirm({
+      title: `Delete “${product.name}”?`,
+      message: 'This removes the product for good. It cannot be undone.',
+      confirmLabel: 'Delete product',
+      tone: 'danger',
+    });
+    if (ok) deleteProduct.mutate(product.id);
   };
 
-  if (isLoading) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Loading products…
-      </p>
-    );
-  }
+  // Changing the category from the table asks first
+  const handleCategoryChange = async (product: Product, newCategoryId: string) => {
+    const oldName = (product.categoryId && categoryNames.get(product.categoryId)) || 'No category';
+    const newName = (newCategoryId && categoryNames.get(newCategoryId)) || 'No category';
+    if (oldName === newName) return;
+
+    const ok = await confirm({
+      title: 'Change category?',
+      message: (
+        <>
+          Move <strong className="text-foreground">{product.name}</strong> from{' '}
+          <strong className="text-foreground">{oldName}</strong> to{' '}
+          <strong className="text-foreground">{newName}</strong>?
+        </>
+      ),
+      confirmLabel: 'Change category',
+    });
+    if (!ok) return;
+
+    updateProduct.mutate({ id: product.id, payload: { categoryId: newCategoryId || null } });
+  };
+
+  if (isLoading) return <PageSkeleton cols={6} />;
 
   if (isError || !data) {
-    return (
-      <p className="text-sm text-destructive">
-        Could not load products.
-      </p>
-    );
+    return <ErrorState message="Could not load products." onRetry={() => refetch()} />;
   }
+
+  const total = data.pagination.total;
+  const isSearching = search.length > 0;
 
   return (
     <div className="flex flex-col gap-8">
       {/* Product list */}
       <div>
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">
-            Products
-          </h1>
+        <PageHeader
+          title="Products"
+          description={
+            isSearching
+              ? `${total} ${total === 1 ? 'match' : 'matches'} for “${search}”`
+              : `${total} ${total === 1 ? 'product' : 'products'} in your catalog`
+          }
+          action={
+            <Button type="button" onClick={openCreate}>
+              <Plus size={16} /> Add product
+            </Button>
+          }
+        />
 
-          <span className="text-sm text-muted-foreground">
-            {data.products.length}{' '}
-            {data.products.length === 1 ? 'product' : 'products'}
-          </span>
-        </div>
+        {(total > 0 || isSearching || searchText) && (
+          <div className="mb-4">
+            <SearchInput
+              label="Search products"
+              placeholder="Search name or SKU"
+              value={searchText}
+              onChange={(v) => {
+                setSearchText(v);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
 
         {data.products.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
-            <p className="text-sm font-medium text-foreground">
-              No products yet
-            </p>
-
-            <p className="text-sm text-muted-foreground">
-              Create your first product using the form below.
-            </p>
-          </div>
+          isSearching ? (
+            <EmptyState
+              icon={SearchX}
+              title="No products match your search"
+              description="Check the spelling, or try a shorter name or SKU."
+              action={
+                <Button type="button" variant="outline" onClick={() => setSearchText('')}>
+                  Clear search
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={Package}
+              title="No products yet"
+              description="Add your first product so you can start taking orders."
+              action={
+                <Button type="button" onClick={openCreate}>
+                  <Plus size={16} /> Add product
+                </Button>
+              }
+            />
+          )
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Name
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     SKU
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Category
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Price
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Stock
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Status
                   </th>
 
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-right text-[13px] font-medium text-muted-foreground">
                     Actions
                   </th>
                 </tr>
@@ -275,19 +350,14 @@ export function ProductsPage() {
                       <td className="px-4 py-3 text-sm">
                         <select
                           aria-label={`Category for ${product.name}`}
-                          className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                          className="rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                           value={
                             product.categoryId && categoryNames.has(product.categoryId)
                               ? product.categoryId
                               : ''
                           }
                           disabled={updateProduct.isPending}
-                          onChange={(e) =>
-                            updateProduct.mutate({
-                              id: product.id,
-                              payload: { categoryId: e.target.value || null },
-                            })
-                          }
+                          onChange={(e) => handleCategoryChange(product, e.target.value)}
                         >
                           <option value="">No category</option>
                           {categories.map((c) => (
@@ -310,7 +380,7 @@ export function ProductsPage() {
                         <span
                           className={
                             product.isActive
-                              ? 'text-green-600'
+                              ? 'text-success'
                               : 'text-muted-foreground'
                           }
                         >
@@ -352,45 +422,68 @@ export function ProductsPage() {
             </table>
           </div>
         )}
+
+        <Pagination
+          page={data.pagination.page}
+          pages={data.pagination.pages}
+          total={total}
+          limit={data.pagination.limit}
+          onPageChange={setPage}
+          noun="products"
+        />
       </div>
 
-      {/* Create product form */}
-      <div className="max-w-sm">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">
-          Create a product
-        </h2>
-
+      {/* Add / edit product window */}
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        size="lg"
+        title={editingProduct ? 'Edit product' : 'Add a product'}
+        description={
+          editingProduct
+            ? `Change the details of “${editingProduct.name}”.`
+            : 'Fill in the details. Price is in rupees.'
+        }
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={closeForm}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="product-form"
+              isLoading={editingProduct ? updateProduct.isPending : createProduct.isPending}
+            >
+              {editingProduct ? 'Save changes' : 'Add product'}
+            </Button>
+          </>
+        }
+      >
         <form
+          id="product-form"
+          noValidate
           onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col gap-4"
+          className="grid gap-4 sm:grid-cols-2"
         >
-          <TextField
-            label="Name"
-            error={errors.name?.message}
-            {...register('name')}
-          />
+          <TextField label="Name" autoFocus error={errors.name?.message} {...register('name')} />
+          <TextField label="SKU" error={errors.sku?.message} {...register('sku')} />
+
+          <div className="sm:col-span-2">
+            <TextField
+              label="Description (optional)"
+              error={errors.description?.message}
+              {...register('description')}
+            />
+          </div>
 
           <TextField
-            label="SKU"
-            error={errors.sku?.message}
-            {...register('sku')}
-          />
-
-          <TextField
-            label="Description"
-            error={errors.description?.message}
-            {...register('description')}
-          />
-
-          <TextField
-            label="Price (paise)"
+            label="Price (₹)"
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             error={errors.price?.message}
             {...register('price', { valueAsNumber: true })}
           />
-
           <TextField
             label="Stock"
             type="number"
@@ -400,52 +493,28 @@ export function ProductsPage() {
             {...register('stock', { valueAsNumber: true })}
           />
 
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="categoryId"
-              className="text-sm font-medium text-foreground"
-            >
-              Category (optional)
-            </label>
-            <select
-              id="categoryId"
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
-              {...register('categoryId')}
-            >
-              <option value="">No category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectField label="Category (optional)" {...register('categoryId')}>
+            <option value="">No category</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </SelectField>
 
-          <div className="flex items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-3 self-end rounded-md border border-border px-3 py-2 text-sm text-foreground">
             <input
-              id="isActive"
               type="checkbox"
-              className="h-4 w-4 rounded border-border"
+              className="h-4 w-4 accent-[hsl(var(--primary))]"
               {...register('isActive')}
             />
-
-            <label
-              htmlFor="isActive"
-              className="text-sm font-medium text-foreground"
-            >
+            <span>
               Active
-            </label>
-          </div>
-
-          <Button
-            type="submit"
-            isLoading={createProduct.isPending}
-            className="mt-2"
-          >
-            Create product
-          </Button>
+              <span className="block text-xs text-muted-foreground">Can be added to orders</span>
+            </span>
+          </label>
         </form>
-      </div>
+      </Modal>
     </div>
   );
 }

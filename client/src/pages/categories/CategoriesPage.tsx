@@ -8,9 +8,16 @@ import {
   useRenameCategory,
   useDeleteCategory,
 } from '@/hooks/useCategories';
+import { Plus, Tags } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
 import type { Category } from '@/types';
+import { useConfirm } from '@/hooks/useConfirm';
+import { PageSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const categorySchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100, 'Name is too long'),
@@ -19,12 +26,14 @@ const categorySchema = z.object({
 type CategoryFormValues = z.infer<typeof categorySchema>;
 
 export function CategoriesPage() {
+  const confirm = useConfirm();
   const { data, isLoading, isError } = useCategories();
   const createCategory = useCreateCategory();
   const renameCategory = useRenameCategory();
   const deleteCategory = useDeleteCategory();
 
   // Which row is being renamed right now, and what is typed in the box
+  const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
@@ -39,7 +48,14 @@ export function CategoriesPage() {
   });
 
   const onSubmit = (values: CategoryFormValues) =>
-    createCategory.mutate(values.name, { onSuccess: () => reset() });
+    createCategory.mutate(values.name, {
+      onSuccess: () => setFormOpen(false),
+    });
+
+  const openForm = () => {
+    reset();
+    setFormOpen(true);
+  };
 
   const startEdit = (category: Category) => {
     setEditingId(category.id);
@@ -58,55 +74,65 @@ export function CategoriesPage() {
     );
   };
 
-  const handleDelete = (category: Category) => {
-    const extra =
-      category.productCount > 0
-        ? ` ${category.productCount} ${category.productCount === 1 ? 'product uses' : 'products use'} it and will be left with no category.`
-        : '';
-    if (window.confirm(`Delete the category "${category.name}"?${extra}`)) {
-      deleteCategory.mutate(category.id);
-    }
+  const handleDelete = async (category: Category) => {
+    const n = category.productCount;
+    const ok = await confirm({
+      title: `Delete “${category.name}”?`,
+      message:
+        n > 0
+          ? `${n} ${n === 1 ? 'product uses' : 'products use'} this category. ${
+              n === 1 ? 'It' : 'They'
+            } will be left with no category.`
+          : 'No products use this category.',
+      confirmLabel: 'Delete category',
+      tone: 'danger',
+    });
+    if (ok) deleteCategory.mutate(category.id);
   };
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading categories…</p>;
+    return <PageSkeleton cols={3} />;
   }
 
   if (isError || !data) {
-    return <p className="text-sm text-destructive">Could not load categories.</p>;
+    return <ErrorState message="Could not load categories." />;
   }
 
   return (
     <div className="flex flex-col gap-8">
       {/* Category list */}
       <div>
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">Categories</h1>
-          <span className="text-sm text-muted-foreground">
-            {data.categories.length} {data.categories.length === 1 ? 'category' : 'categories'}
-          </span>
-        </div>
+        <PageHeader
+          title="Categories"
+          description={`${data.categories.length} ${data.categories.length === 1 ? 'category' : 'categories'} to group your products`}
+          action={
+            <Button type="button" onClick={openForm}>
+              <Plus size={16} /> Add category
+            </Button>
+          }
+        />
 
         {data.categories.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
-            <p className="text-sm font-medium text-foreground">No categories yet</p>
-            <p className="text-sm text-muted-foreground">
-              Add your first category using the form below, then pick it when you create a
-              product.
-            </p>
-          </div>
+          <EmptyState
+            icon={Tags}
+            title="No categories yet"
+            description="Group your products into categories, then pick one when you add a product."
+            action={
+              <Button type="button" onClick={openForm}><Plus size={16} /> Add category</Button>
+            }
+          />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Products
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-right text-[13px] font-medium text-muted-foreground">
                     Actions
                   </th>
                 </tr>
@@ -127,7 +153,7 @@ export function CategoriesPage() {
                               if (e.key === 'Enter') saveEdit(category);
                               if (e.key === 'Escape') setEditingId(null);
                             }}
-                            className="w-full max-w-xs rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                            className="w-full max-w-xs rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
                           />
                         ) : (
                           category.name
@@ -190,16 +216,28 @@ export function CategoriesPage() {
         )}
       </div>
 
-      {/* Add category form */}
-      <div className="max-w-sm">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">Add a category</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <TextField label="Name" error={errors.name?.message} {...register('name')} />
-          <Button type="submit" isLoading={createCategory.isPending}>
-            Add category
-          </Button>
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        size="sm"
+        title="Add a category"
+        description="Categories help you group products, like “Books” or “Electronics”."
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="category-form" isLoading={createCategory.isPending}>
+              Add category
+            </Button>
+          </>
+        }
+      >
+        <form id="category-form"
+          noValidate onSubmit={handleSubmit(onSubmit)}>
+          <TextField label="Name" autoFocus error={errors.name?.message} {...register('name')} />
         </form>
-      </div>
+      </Modal>
     </div>
   );
 }

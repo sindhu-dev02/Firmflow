@@ -24,12 +24,12 @@ interface ButtonProps
 }
 
 const variants: Record<Variant, string> = {
-  primary: "bg-primary text-primary-foreground hover:opacity-90",
+  primary: "bg-primary text-primary-foreground hover:bg-primary/90",
   secondary: "bg-secondary text-secondary-foreground hover:bg-muted",
-  outline: "border border-border bg-transparent hover:bg-muted",
+  outline: "border border-border bg-card hover:bg-muted",
   ghost: "hover:bg-muted",
   destructive:
-    "bg-destructive text-destructive-foreground hover:opacity-90",
+    "bg-destructive text-destructive-foreground hover:bg-destructive/90",
 };
 
 const sizes: Record<Size, string> = {

@@ -6,6 +6,8 @@ import { useAuthStore } from '@/store/authStore';
 import { PlanCard } from '@/components/billing/PlanCard';
 import { Button } from '@/components/ui/Button';
 import type { BillingCycle } from '@/types';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 export function PricingPage() {
   const navigate = useNavigate();
@@ -61,7 +63,7 @@ export function PricingPage() {
             onClick={() => setCycle(option)}
             className={`rounded px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
               cycle === option
-                ? 'bg-card text-foreground shadow-sm'
+                ? 'bg-card text-foreground ring-1 ring-border'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -71,9 +73,13 @@ export function PricingPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading plans…</p>
+        <div role="status" aria-label="Loading" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-72 w-full" />
+          ))}
+        </div>
       ) : plansError || !plansData ? (
-        <p className="text-sm text-destructive">Could not load plans.</p>
+        <ErrorState message="Could not load plans." />
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {visiblePlans.map((plan) => (

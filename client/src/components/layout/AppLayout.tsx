@@ -13,11 +13,13 @@ const COLLAPSE_KEY = 'firmflow-sidebar-collapsed';
 function Logo({ showName }: { showName: boolean }) {
   return (
     <>
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-accent font-display text-lg font-bold text-accent-foreground">
         F
       </span>
       {showName && (
-        <span className="whitespace-nowrap text-lg font-bold text-foreground">FirmFlow</span>
+        <span className="whitespace-nowrap font-display text-lg font-semibold text-sidebar-foreground">
+          FirmFlow
+        </span>
       )}
     </>
   );
@@ -25,7 +27,7 @@ function Logo({ showName }: { showName: boolean }) {
 
 function Avatar({ name }: { name: string }) {
   return (
-    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold uppercase text-primary ring-1 ring-inset ring-primary/20">
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-sm font-semibold uppercase text-accent-foreground">
       {name.trim().charAt(0) || '?'}
     </span>
   );
@@ -52,9 +54,9 @@ function SidebarNav({
           <div key={group.label ?? 'main'} className={index === 0 ? '' : 'mt-4'}>
             {group.label &&
               (collapsed ? (
-                <div className="mx-3 mb-2 border-t border-border" />
+                <div className="mx-3 mb-2 border-t border-sidebar-border" />
               ) : (
-                <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                <p className="mb-1 px-3 text-xs font-medium text-sidebar-muted">
                   {group.label}
                 </p>
               ))}
@@ -69,22 +71,24 @@ function SidebarNav({
                     onClick={onNavigate}
                     title={collapsed ? item.label : undefined}
                     aria-label={item.label}
-                    className="relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                    className="relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground"
                   >
                     {isActive && (
                       <motion.span
                         layoutId="active-nav-pill"
-                        className="absolute inset-0 rounded-md bg-primary/10 ring-1 ring-inset ring-primary/20"
+                        className="absolute inset-0 rounded-md bg-sidebar-active"
                         transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                      />
+                      >
+                        <span className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-accent" />
+                      </motion.span>
                     )}
                     <item.icon
                       size={18}
                       strokeWidth={2}
-                      className={`relative shrink-0 ${isActive ? 'text-primary' : ''}`}
+                      className={`relative shrink-0 ${isActive ? 'text-accent' : ''}`}
                     />
                     {!collapsed && (
-                      <span className={`relative whitespace-nowrap ${isActive ? 'text-foreground' : ''}`}>
+                      <span className={`relative whitespace-nowrap ${isActive ? 'text-sidebar-foreground' : ''}`}>
                         {item.label}
                       </span>
                     )}
@@ -112,8 +116,8 @@ function SidebarUser({ collapsed, onBeforeLogout }: { collapsed: boolean; onBefo
       </Link>
       {!collapsed && (
         <div className="min-w-0 flex-1 text-sm">
-          <p className="truncate font-medium text-foreground">{user.name}</p>
-          <p className="truncate text-xs capitalize text-muted-foreground">
+          <p className="truncate font-medium text-sidebar-foreground">{user.name}</p>
+          <p className="truncate text-xs capitalize text-sidebar-muted">
             {user.role.replace('_', ' ')}
           </p>
         </div>
@@ -127,7 +131,7 @@ function SidebarUser({ collapsed, onBeforeLogout }: { collapsed: boolean; onBefo
           onBeforeLogout?.();
           logout.mutate();
         }}
-        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        className="rounded-md p-2 text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground disabled:opacity-50"
       >
         <LogOut size={18} />
       </button>
@@ -164,9 +168,9 @@ export function AppLayout() {
       <motion.aside
         animate={{ width: collapsed ? 72 : 240 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="hidden shrink-0 flex-col border-r border-border bg-card md:flex"
+        className="hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex"
       >
-        <div className="flex h-14 items-center border-b border-border px-4">
+        <div className="flex h-14 items-center border-b border-sidebar-border px-4">
           <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
             <Logo showName={!collapsed} />
           </Link>
@@ -174,12 +178,12 @@ export function AppLayout() {
 
         <SidebarNav id="desktop" collapsed={collapsed} />
 
-        <div className="border-t border-border p-3">
+        <div className="border-t border-sidebar-border p-3">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
             aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
-            className="mb-3 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted"
+            className="mb-3 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground"
           >
             <motion.span animate={{ rotate: collapsed ? 180 : 0 }}>
               <ChevronsLeft size={16} />
@@ -206,9 +210,9 @@ export function AppLayout() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card md:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sidebar-border bg-sidebar md:hidden"
             >
-              <div className="flex h-14 items-center justify-between border-b border-border px-4">
+              <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
                 <Link
                   to="/dashboard"
                   className="flex items-center gap-2"
@@ -219,7 +223,7 @@ export function AppLayout() {
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                  className="rounded-md p-2 text-sidebar-muted hover:bg-sidebar-hover"
                   aria-label="Close menu"
                 >
                   <X size={18} />
@@ -228,7 +232,7 @@ export function AppLayout() {
 
               <SidebarNav id="mobile" collapsed={false} onNavigate={() => setMobileOpen(false)} />
 
-              <div className="border-t border-border p-3">
+              <div className="border-t border-sidebar-border p-3">
                 <SidebarUser collapsed={false} onBeforeLogout={() => setMobileOpen(false)} />
               </div>
             </motion.aside>

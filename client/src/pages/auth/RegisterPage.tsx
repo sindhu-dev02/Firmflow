@@ -2,8 +2,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router';
-import { motion } from 'framer-motion';
+import { AuthShell } from '@/components/auth/AuthShell';
 import { TextField } from '@/components/ui/TextField';
+import { PasswordField } from '@/components/ui/PasswordField';
 import { Button } from '@/components/ui/Button';
 import { useRegister } from '@/hooks/useAuth';
 
@@ -26,49 +27,46 @@ export function RegisterPage() {
   const onSubmit = (values: RegisterFormValues) => registerUser.mutate(values);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm"
-      >
-        <h1 className="mb-6 text-2xl font-bold text-foreground">Create your account</h1>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <TextField
-            label="Name"
-            autoComplete="name"
-            error={errors.name?.message}
-            {...register('name')}
-          />
-          <TextField
-            label="Email"
-            type="email"
-            autoComplete="email"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <TextField
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-
-          <Button type="submit" isLoading={registerUser.isPending} className="mt-2">
-            Create account
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+    <AuthShell
+      eyebrow="Step 1 of 2"
+      title="Create your account"
+      subtitle="Next, you'll set up your organization. It takes a minute."
+      footer={
+        <>
           Already have an account?{' '}
           <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in
           </Link>
-        </p>
-      </motion.div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <TextField
+          label="Your name"
+          autoComplete="name"
+          autoFocus
+          error={errors.name?.message}
+          {...register('name')}
+        />
+        <TextField
+          label="Email"
+          type="email"
+          autoComplete="email"
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <PasswordField
+          label="Password"
+          autoComplete="new-password"
+          hint="At least 8 characters"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+
+        <Button type="submit" size="lg" isLoading={registerUser.isPending} className="mt-2">
+          Continue
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

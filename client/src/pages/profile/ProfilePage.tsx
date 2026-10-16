@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -25,10 +26,15 @@ export function ProfilePage() {
   });
 
   const onSubmit = (values: ProfileFormValues) => updateProfile.mutate(values);
-  //const apiError = updateProfile.error as AxiosError<ApiErrorPayload> | null;
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading profile…</p>;
+    return (
+      <div role="status" aria-label="Loading" className="flex max-w-md flex-col gap-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
   }
 
   return (
@@ -42,7 +48,7 @@ export function ProfilePage() {
           {...register('name')}
         />
         <TextField label="Email" value={data?.user.email} disabled />
-        <TextField label="Role" value={data?.user.role} disabled className="capitalize" />
+        <TextField label="Role" value={data?.user.role.replace('_', ' ')} disabled className="capitalize" />
 
         <Button type="submit" isLoading={updateProfile.isPending} className="mt-2">
           Save changes

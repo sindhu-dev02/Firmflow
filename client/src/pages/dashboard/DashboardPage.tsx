@@ -11,8 +11,11 @@ import {
 import { Package, ShoppingCart, Users, UserCheck, IndianRupee } from 'lucide-react';
 import { useDashboard } from '@/hooks/useOrganization';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { formatMoney, formatDateTime } from '@/lib/format';
 import type { DashboardBusiness } from '@/types';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 function StatCard({
   label,
@@ -32,7 +35,7 @@ function StatCard({
           <p className="text-sm text-muted-foreground">{label}</p>
           <Icon size={16} className="text-muted-foreground" />
         </div>
-        <p className="mt-2 text-3xl font-bold text-foreground">{value}</p>
+        <p className="mt-2 font-display text-3xl font-semibold text-foreground">{value}</p>
         {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
@@ -62,18 +65,14 @@ function UsageBar({ label, used, limit }: { label: string; used: number; limit: 
   );
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-warning/15 text-warning',
-  confirmed: 'bg-primary/15 text-primary',
-  fulfilled: 'bg-success/15 text-success',
-  cancelled: 'bg-destructive/15 text-destructive',
-};
-
 function BusinessSections({ business }: { business: DashboardBusiness }) {
   const { counts, usage, last7Days, recentOrders, lowStock } = business;
-  const nearLimit =
-    (usage.products.limit !== -1 && usage.products.used / usage.products.limit >= 0.8) ||
-    (usage.employees.limit !== -1 && usage.employees.used / usage.employees.limit >= 0.8);
+  const isFull = (u: { used: number; limit: number }) => u.limit !== -1 && u.used >= u.limit;
+  const isNearly = (u: { used: number; limit: number }) =>
+    u.limit !== -1 && u.used / u.limit >= 0.8;
+  const atLimit = isFull(usage.products) || isFull(usage.employees);
+  const nearLimit = isNearly(usage.products) || isNearly(usage.employees);
+  const hasSales = last7Days.some((d) => d.revenue > 0);
 
   const chartData = last7Days.map((d) => ({
     ...d,
@@ -114,6 +113,19 @@ function BusinessSections({ business }: { business: DashboardBusiness }) {
             <CardTitle>Sales, last 7 days</CardTitle>
           </CardHeader>
           <CardContent>
+            {!hasSales ? (
+              <div className="grid h-64 place-items-center rounded-md border border-dashed border-border text-center">
+                <div>
+                  <p className="text-sm font-medium text-foreground">No sales in the last 7 days</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    <Link to="/orders" className="font-medium text-primary hover:underline">
+                      Create an order
+                    </Link>{' '}
+                    and it will show up here.
+                  </p>
+                </div>
+              </div>
+            ) : (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ left: 0, right: 8, top: 8 }}>
@@ -143,6 +155,7 @@ function BusinessSections({ business }: { business: DashboardBusiness }) {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+            )}
           </CardContent>
         </Card>
 
@@ -155,7 +168,7 @@ function BusinessSections({ business }: { business: DashboardBusiness }) {
             <UsageBar label="Employees" used={usage.employees.used} limit={usage.employees.limit} />
             {nearLimit && (
               <Link to="/billing/plans" className="text-sm font-medium text-primary hover:underline">
-                Running low. See plans →
+                {atLimit ? 'Limit reached. Upgrade your plan →' : 'Running low. See plans →'}
               </Link>
             )}
           </CardContent>
@@ -169,7 +182,9 @@ function BusinessSections({ business }: { business: DashboardBusiness }) {
           </CardHeader>
           <CardContent>
             {recentOrders.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No orders yet.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No orders yet. They will show up here as soon as you create one.
+              </p>
             ) : (
               <ul className="divide-y divide-border">
                 {recentOrders.map((o) => (
@@ -180,17 +195,14 @@ function BusinessSections({ business }: { business: DashboardBusiness }) {
                         {o.itemCount} item{o.itemCount === 1 ? '' : 's'} · {formatDateTime(o.createdAt)}
                       </p>
                     </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                        STATUS_STYLES[o.status] ?? ''
-                      }`}
-                    >
-                      {o.status}
-                    </span>
+                    <OrderStatusBadge status={o.status} />
                   </li>
                 ))}
               </ul>
             )}
+            <Link to="/orders" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
+              View all orders →
+            </Link>
           </CardContent>
         </Card>
 
@@ -209,7 +221,7 @@ function BusinessSections({ business }: { business: DashboardBusiness }) {
                       <p className="font-medium text-foreground">{p.name}</p>
                       <p className="text-xs text-muted-foreground">{p.sku}</p>
                     </div>
-                    <span className={p.stock === 0 ? 'font-medium text-destructive' : 'text-warning'}>
+                    <span className={p.stock === 0 ? 'font-medium text-destructive' : 'text-amber-700 dark:text-warning'}>
                       {p.stock === 0 ? 'Out of stock' : `${p.stock} left`}
                     </span>
                   </li>
@@ -230,11 +242,24 @@ export function DashboardPage() {
   const { data, isLoading, isError } = useDashboard();
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading dashboard…</p>;
+    return (
+      <div role="status" aria-label="Loading" className="flex flex-col gap-6">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
 
   if (isError || !data) {
-    return <p className="text-sm text-destructive">Could not load dashboard.</p>;
+    return <ErrorState message="Could not load the dashboard." />;
   }
 
   return (
@@ -249,8 +274,15 @@ export function DashboardPage() {
       ) : (
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm font-medium text-foreground">
               Welcome to {data.organization.name}.
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your account is ready. You can update your details on the{' '}
+              <Link to="/profile" className="font-medium text-primary hover:underline">
+                Profile
+              </Link>{' '}
+              page. More features for customers are coming soon.
             </p>
           </CardContent>
         </Card>

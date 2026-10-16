@@ -8,11 +8,19 @@ import {
   useToggleCustomer,
   useDeleteCustomer,
 } from '@/hooks/useCustomers';
+import { Plus, Users, SearchX } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EditMemberModal } from '@/components/team/EditMemberModal';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 import { formatMoney, formatDateTime } from '@/lib/format';
 import type { Customer } from '@/types';
+import { useConfirm } from '@/hooks/useConfirm';
+import { PageSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const customerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -23,6 +31,7 @@ const customerSchema = z.object({
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
 export function CustomersPage() {
+  const confirm = useConfirm();
   const { data, isLoading, isError } = useCustomers();
   const addCustomer = useAddCustomer();
   const toggleCustomer = useToggleCustomer();
@@ -31,6 +40,8 @@ export function CustomersPage() {
   const isOwner = currentUser?.role === 'org_owner';
 
   const [search, setSearch] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Customer | null>(null);
 
   const {
     register,
@@ -43,20 +54,41 @@ export function CustomersPage() {
   });
 
   const onSubmit = (values: CustomerFormValues) =>
-    addCustomer.mutate(values, { onSuccess: () => reset() });
+    addCustomer.mutate(values, { onSuccess: () => setFormOpen(false) });
 
-  const handleDelete = (customer: Customer) => {
-    if (window.confirm(`Delete ${customer.name} for good? This cannot be undone.`)) {
-      deleteCustomer.mutate(customer.id);
+  const openForm = () => {
+    reset();
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (customer: Customer) => {
+    const ok = await confirm({
+      title: `Delete ${customer.name}?`,
+      message: 'This removes the customer for good. It cannot be undone.',
+      confirmLabel: 'Delete customer',
+      tone: 'danger',
+    });
+    if (ok) deleteCustomer.mutate(customer.id);
+  };
+
+  const handleToggle = async (customer: Customer) => {
+    if (customer.isActive) {
+      const ok = await confirm({
+        title: `Deactivate ${customer.name}?`,
+        message: 'They will be signed out and cannot log in until you reactivate them.',
+        confirmLabel: 'Deactivate',
+      });
+      if (!ok) return;
     }
+    toggleCustomer.mutate({ id: customer.id, activate: !customer.isActive });
   };
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading customers…</p>;
+    return <PageSkeleton cols={5} />;
   }
 
   if (isError || !data) {
-    return <p className="text-sm text-destructive">Could not load customers.</p>;
+    return <ErrorState message="Could not load customers." />;
   }
 
   const term = search.trim().toLowerCase();
@@ -67,42 +99,54 @@ export function CustomersPage() {
     : data.customers;
 
   const headerClass =
-    'px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground';
+    'px-4 py-3 text-left text-[13px] font-medium text-muted-foreground';
 
   return (
     <div className="flex flex-col gap-8">
       {/* Customer list */}
       <div>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-foreground">Customers</h1>
-
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              {data.customers.length} {data.customers.length === 1 ? 'customer' : 'customers'}
-            </span>
+        <PageHeader
+          title="Customers"
+          description={`${data.customers.length} ${data.customers.length === 1 ? 'customer' : 'customers'}`}
+          extra={
             <input
               type="search"
+              aria-label="Search customers"
               placeholder="Search name or email…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
             />
-          </div>
-        </div>
+          }
+          action={
+            <Button type="button" onClick={openForm}>
+              <Plus size={16} /> Add customer
+            </Button>
+          }
+        />
 
         {data.customers.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
-            <p className="text-sm font-medium text-foreground">No customers yet</p>
-            <p className="text-sm text-muted-foreground">
-              Add your first customer using the form below.
-            </p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No customers yet"
+            description="Add the people you sell to, so you can create orders for them."
+            action={
+              <Button type="button" onClick={openForm}><Plus size={16} /> Add customer</Button>
+            }
+          />
         ) : visible.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            No customers match “{search}”.
-          </p>
+          <EmptyState
+            icon={SearchX}
+            title="No customers match your search"
+            description={`Nothing found for “${search}”. Try a different name or email.`}
+            action={
+              <Button type="button" variant="outline" onClick={() => setSearch('')}>
+                Clear search
+              </Button>
+            }
+          />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
@@ -112,7 +156,7 @@ export function CustomersPage() {
                   <th className={headerClass}>Spent</th>
                   <th className={headerClass}>Last order</th>
                   <th className={headerClass}>Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-right text-[13px] font-medium text-muted-foreground">
                     Actions
                   </th>
                 </tr>
@@ -131,29 +175,33 @@ export function CustomersPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <span
-                        className={customer.isActive ? 'text-green-600' : 'text-muted-foreground'}
+                        className={customer.isActive ? 'text-success' : 'text-muted-foreground'}
                       >
                         {customer.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {isOwner && (
-                        <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditing(customer)}
+                        >
+                          Edit
+                        </Button>
+                        {isOwner && (
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
                             disabled={toggleCustomer.isPending}
-                            onClick={() =>
-                              toggleCustomer.mutate({
-                                id: customer.id,
-                                activate: !customer.isActive,
-                              })
-                            }
+                            onClick={() => handleToggle(customer)}
                           >
                             {customer.isActive ? 'Deactivate' : 'Reactivate'}
                           </Button>
-                          {!customer.isActive && customer.orderCount === 0 && (
+                        )}
+                        {isOwner && !customer.isActive && customer.orderCount === 0 && (
                             <Button
                               type="button"
                               size="sm"
@@ -165,8 +213,7 @@ export function CustomersPage() {
                               Delete
                             </Button>
                           )}
-                        </div>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -176,31 +223,38 @@ export function CustomersPage() {
         )}
       </div>
 
-      {/* Add customer form */}
-      <div className="max-w-sm">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">Add a customer</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <TextField label="Name" error={errors.name?.message} {...register('name')} />
-          <TextField
-            label="Email"
-            type="email"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <TextField
-            label="Temporary password"
-            type="password"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <p className="text-xs text-muted-foreground">
-            The customer will be asked to choose a new password when they first sign in.
-          </p>
-          <Button type="submit" isLoading={addCustomer.isPending}>
-            Add customer
-          </Button>
+      <EditMemberModal member={editing} onClose={() => setEditing(null)} />
+
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title="Add a customer"
+        description="They will be asked to choose a new password when they first sign in."
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="customer-form" isLoading={addCustomer.isPending}>
+              Add customer
+            </Button>
+          </>
+        }
+      >
+        <form id="customer-form"
+          noValidate onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
+          <TextField label="Name" autoFocus error={errors.name?.message} {...register('name')} />
+          <TextField label="Email" type="email" error={errors.email?.message} {...register('email')} />
+          <div className="sm:col-span-2">
+            <TextField
+              label="Temporary password"
+              type="password"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+          </div>
         </form>
-      </div>
+      </Modal>
     </div>
   );
 }

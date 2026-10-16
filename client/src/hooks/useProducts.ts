@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { productsApi, type ListProductsParams, type ProductPayload } from '@/api/products';
@@ -8,6 +8,7 @@ export function useProducts(params: ListProductsParams = {}) {
   return useQuery({
     queryKey: ['products', params],
     queryFn: () => productsApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 

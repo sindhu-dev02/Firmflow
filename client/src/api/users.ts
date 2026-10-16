@@ -14,6 +14,11 @@ export interface InvitePayload {
   role: 'employee' | 'customer';
 }
 
+export interface UpdateMemberPayload {
+  name?: string;
+  email?: string;
+}
+
 export const usersApi = {
   getProfile: async () => {
     const { data } = await apiClient.get<{ user: User }>('/users/profile');
@@ -29,6 +34,10 @@ export const usersApi = {
   },
   inviteUser: async (payload: InvitePayload) => {
     const { data } = await apiClient.post<{ user: User }>('/users/invite', payload);
+    return data;
+  },
+  updateMember: async (id: string, payload: UpdateMemberPayload) => {
+    const { data } = await apiClient.patch<{ user: User }>(`/users/${id}`, payload);
     return data;
   },
   deactivateUser: async (id: string) => {

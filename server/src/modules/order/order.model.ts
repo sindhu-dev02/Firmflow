@@ -5,9 +5,9 @@ export type OrderStatus = 'pending' | 'confirmed' | 'fulfilled' | 'cancelled';
 export interface IOrderItem {
   productId: Types.ObjectId;
   nameSnapshot: string;
-  unitPriceSnapshot: number; // cents
+  unitPriceSnapshot: number; // paise
   quantity: number;
-  lineTotal: number; // cents
+  lineTotal: number; // paise
 }
 
 export interface IShippingAddressSnapshot {

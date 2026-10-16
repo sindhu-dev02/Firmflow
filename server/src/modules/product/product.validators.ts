@@ -5,7 +5,7 @@ export const createProductSchema = z.object({
     name: z.string().trim().min(1, 'Name is required').max(200),
     sku: z.string().trim().min(1, 'SKU is required').max(64),
     description: z.string().trim().max(2000).optional(),
-    price: z.number().int('Price must be an integer (cents)').min(0),
+    price: z.number().int('Price must be a whole number of paise').min(0),
     stock: z.number().int('Stock must be an integer').min(0).optional(),
     isActive: z.boolean().optional(),
     categoryId: z.string().min(1).optional(),
@@ -21,10 +21,10 @@ export const updateProductSchema = z.object({
       name: z.string().trim().min(1).max(200).optional(),
       sku: z.string().trim().min(1).max(64).optional(),
       description: z.string().trim().max(2000).optional(),
-      price: z.number().int('Price must be an integer (cents)').min(0).optional(),
+      price: z.number().int('Price must be a whole number of paise').min(0).optional(),
       stock: z.number().int('Stock must be an integer').min(0).optional(),
       isActive: z.boolean().optional(),
-      categoryId: z.string().min(1).nullable().optional(), // null = remove the categoryc
+      categoryId: z.string().min(1).nullable().optional(), // null = remove the category
     })
     .refine((data) => Object.keys(data).length > 0, {
       message: 'At least one field must be provided',

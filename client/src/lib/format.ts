@@ -15,9 +15,13 @@ export function formatMoney(
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
 
-  return new Date(iso).toLocaleString('en-IN', {
+  const date = new Date(iso);
+  const isThisYear = date.getFullYear() === new Date().getFullYear();
+
+  return date.toLocaleString('en-IN', {
     day: 'numeric',
     month: 'short',
+    ...(isThisYear ? {} : { year: 'numeric' }),
     hour: 'numeric',
     minute: '2-digit',
   });

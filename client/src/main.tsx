@@ -5,6 +5,7 @@ import App from './App.tsx';
 import './index.css';
 import '@/api/axios';
 import { Toaster } from 'sonner';
+import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,7 +19,9 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <ConfirmProvider>
+        <App />
+      </ConfirmProvider>
       <Toaster
         position="top-right"
         toastOptions={{

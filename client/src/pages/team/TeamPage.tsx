@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,11 +8,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useTeam } from '@/hooks/useTeam';
 import { usersApi, type InvitePayload } from '@/api/users';
+import { Plus, UserPlus } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EditMemberModal } from '@/components/team/EditMemberModal';
 import { TextField } from '@/components/ui/TextField';
+import { SelectField } from '@/components/ui/SelectField';
 import { Button } from '@/components/ui/Button';
 import { getErrorMessage, getPlanLimitError } from '@/lib/errors';
 import type { TeamMember, TeamResponse } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { useConfirm } from '@/hooks/useConfirm';
+import { PageSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const inviteSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -118,6 +128,7 @@ function useToggleUserStatus() {
 }
 
 export function TeamPage() {
+  const confirm = useConfirm();
   const { data: allData, isLoading, isError } = useTeam();
   // Customers have their own page, so the Team page shows staff only
   const data = allData
@@ -128,6 +139,8 @@ export function TeamPage() {
   const deleteMember = useDeleteUser();
   const currentUser = useAuthStore((s) => s.user);
   const canManageTeam = currentUser?.role === 'org_owner';
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<TeamMember | null>(null);
 
   const {
     register,
@@ -143,54 +156,63 @@ export function TeamPage() {
 
   const onSubmit = (values: InviteFormValues) =>
     inviteUser.mutate(values, {
-      onSuccess: () => reset(),
+      onSuccess: () => setFormOpen(false),
     });
 
+  const openForm = () => {
+    reset({ name: '', email: '', password: '', role: 'employee' });
+    setFormOpen(true);
+  };
+
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading team…</p>;
+    return <PageSkeleton cols={5} />;
   }
 
   if (isError || !data) {
-    return <p className="text-sm text-destructive">Could not load team members.</p>;
+    return <ErrorState message="Could not load team members." />;
   }
 
   return (
     <div className="flex flex-col gap-8">
       {/* Team list */}
       <div>
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">Team</h1>
-          <span className="text-sm text-muted-foreground">
-            {data.users.length} {data.users.length === 1 ? 'member' : 'members'}
-          </span>
-        </div>
+        <PageHeader
+          title="Team"
+          description={`${data.users.length} ${data.users.length === 1 ? 'member' : 'members'}`}
+          action={
+            canManageTeam && (
+              <Button type="button" onClick={openForm}>
+                <Plus size={16} /> Invite member
+              </Button>
+            )
+          }
+        />
 
         {data.users.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
-            <p className="text-sm font-medium text-foreground">No team members yet</p>
-            <p className="text-sm text-muted-foreground">
-              Invite your first teammate using the form below.
-            </p>
-          </div>
+          <EmptyState
+            icon={UserPlus}
+            title="No team members yet"
+            description="Invite a teammate to help you manage products and orders."
+          />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Role
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Status
                   </th>
                   {canManageTeam && (
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">
+                    <th className="px-4 py-3 text-right text-[13px] font-medium text-muted-foreground">
                       Actions
                     </th>
                   )}
@@ -219,7 +241,7 @@ export function TeamPage() {
                           {member.role.replace('_', ' ')}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <span className={member.isActive ? 'text-green-600' : 'text-muted-foreground'}>
+                          <span className={member.isActive ? 'text-success' : 'text-muted-foreground'}>
                             {member.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
@@ -232,10 +254,27 @@ export function TeamPage() {
                                   type="button"
                                   variant="outline"
                                   size="sm"
+                                  onClick={() => setEditing(member)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
                                   isLoading={toggleStatus.isPending}
-                                  onClick={() =>
-                                    toggleStatus.mutate({ id: member.id, activate: !member.isActive })
-                                  }
+                                  onClick={async () => {
+                                    if (member.isActive) {
+                                      const ok = await confirm({
+                                        title: `Deactivate ${member.name}?`,
+                                        message:
+                                          'They will be signed out and cannot log in until you reactivate them. Their seat stays used.',
+                                        confirmLabel: 'Deactivate',
+                                      });
+                                      if (!ok) return;
+                                    }
+                                    toggleStatus.mutate({ id: member.id, activate: !member.isActive });
+                                  }}
                                 >
                                   {member.isActive ? 'Deactivate' : 'Reactivate'}
                                 </Button>
@@ -247,8 +286,14 @@ export function TeamPage() {
                                     size="sm"
                                     className="text-destructive"
                                     isLoading={deleteMember.isPending}
-                                    onClick={() => {
-                                      const ok = window.confirm(`Delete ${member.name} for good? This cannot be undone.`);
+                                    onClick={async () => {
+                                      const ok = await confirm({
+                                        title: `Delete ${member.name}?`,
+                                        message:
+                                          'This removes them for good and frees up their seat. It cannot be undone.',
+                                        confirmLabel: 'Delete member',
+                                        tone: 'danger',
+                                      });
                                       if (ok) deleteMember.mutate(member.id);
                                     }}
                                   >
@@ -269,12 +314,27 @@ export function TeamPage() {
         )}
       </div>
 
-      {/* Invite form */}
-      <div className="max-w-sm">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">Invite a team member</h2>
+      <EditMemberModal member={editing} onClose={() => setEditing(null)} />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <TextField label="Name" error={errors.name?.message} {...register('name')} />
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title="Invite a team member"
+        description="They will be asked to choose a new password when they first sign in."
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="invite-form" isLoading={inviteUser.isPending}>
+              Send invite
+            </Button>
+          </>
+        }
+      >
+        <form id="invite-form"
+          noValidate onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
+          <TextField label="Name" autoFocus error={errors.name?.message} {...register('name')} />
           <TextField label="Email" type="email" error={errors.email?.message} {...register('email')} />
           <TextField
             label="Temporary password"
@@ -282,22 +342,11 @@ export function TeamPage() {
             error={errors.password?.message}
             {...register('password')}
           />
-
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-foreground">Role</label>
-            <select
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
-              {...register('role')}
-            >
-              <option value="employee">Employee</option>
-            </select>
-          </div>
-
-          <Button type="submit" isLoading={inviteUser.isPending} className="mt-2">
-            Invite
-          </Button>
+          <SelectField label="Role" {...register('role')}>
+            <option value="employee">Employee</option>
+          </SelectField>
         </form>
-      </div>
+      </Modal>
     </div>
   );
 }

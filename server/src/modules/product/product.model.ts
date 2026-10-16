@@ -48,7 +48,7 @@ const productSchema = new Schema<IProduct>(
       min: 0,
       validate: {
         validator: Number.isInteger,
-        message: 'price must be an integer (cents)',
+        message: 'price must be a whole number of paise',
       },
     },
     stock: {

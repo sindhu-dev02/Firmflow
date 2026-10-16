@@ -43,6 +43,9 @@ export const createProduct = catchAsync(async (req: Request, res: Response) => {
   res.status(201).json({ product: serializeProduct(product) });
 });
 
+// The search box text is plain text, not a pattern: "(" or "." must not break the search
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const listProducts = catchAsync(async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
   const { isActive, search, page, limit } = req.query as unknown as {
@@ -62,9 +65,10 @@ export const listProducts = catchAsync(async (req: Request, res: Response) => {
   }
 
   if (search) {
+    const pattern = escapeRegex(search);
     filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { sku: { $regex: search, $options: 'i' } },
+      { name: { $regex: pattern, $options: 'i' } },
+      { sku: { $regex: pattern, $options: 'i' } },
     ];
   }
 
@@ -128,6 +132,13 @@ export const updateProduct = catchAsync(async (req: Request, res: Response) => {
 
   Object.assign(product, req.body);
   await product.save();
+
+  await logActivity(req, {
+    action: 'product.updated',
+    targetType: 'product',
+    targetId: String(product._id),
+    metadata: { name: product.name, sku: product.sku },
+  });
 
   res.status(200).json({ product: serializeProduct(product) });
 });

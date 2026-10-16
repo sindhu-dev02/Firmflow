@@ -1,9 +1,12 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { AuthShell } from '@/components/auth/AuthShell';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
 import { useCreateOrganization } from '@/hooks/useOrganization';
+import { useLogout } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
 import type { AxiosError } from 'axios';
 import type { ApiErrorPayload } from '@/types';
 
@@ -27,51 +30,64 @@ function slugify(value: string) {
 
 export function CreateOrganizationPage() {
   const createOrg = useCreateOrganization();
+  const logout = useLogout();
+  const user = useAuthStore((s) => s.user);
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<OrgFormValues>({ resolver: zodResolver(orgSchema) });
 
+  const slug = watch('slug');
   const onSubmit = (values: OrgFormValues) => createOrg.mutate(values);
   const apiError = createOrg.error as AxiosError<ApiErrorPayload> | null;
+  const firstName = user?.name?.trim().split(' ')[0];
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm">
-        <h1 className="mb-2 text-2xl font-bold text-foreground">
-          Set up your organization
-        </h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          You'll be the owner of this organization.
-        </p>
+    <AuthShell
+      eyebrow="Step 2 of 2"
+      title={firstName ? `Almost there, ${firstName}` : 'Almost there'}
+      subtitle="Name your organization. You'll be its owner and can invite your team afterwards."
+      footer={
+        <button
+          type="button"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+          className="font-medium text-primary hover:underline disabled:opacity-50"
+        >
+          Sign out
+        </button>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <TextField
+          label="Organization name"
+          autoFocus
+          placeholder="e.g. Kavya Stationers"
+          error={errors.name?.message}
+          {...register('name', {
+            onChange: (e) => setValue('slug', slugify(e.target.value), { shouldValidate: false }),
+          })}
+        />
+        <TextField
+          label="URL slug"
+          hint={`Your workspace will be called /${slug || 'your-organization'}`}
+          error={errors.slug?.message}
+          {...register('slug')}
+        />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <TextField
-            label="Organization name"
-            error={errors.name?.message}
-            {...register('name', {
-              onChange: (e) => setValue('slug', slugify(e.target.value)),
-            })}
-          />
-          <TextField
-            label="URL slug"
-            error={errors.slug?.message}
-            {...register('slug')}
-          />
+        {apiError && (
+          <p className="text-sm text-destructive">
+            {apiError.response?.data?.message ?? 'Could not create organization.'}
+          </p>
+        )}
 
-          {apiError && (
-            <p className="text-sm text-red-500">
-              {apiError.response?.data?.message ?? 'Could not create organization.'}
-            </p>
-          )}
-
-          <Button type="submit" isLoading={createOrg.isPending} className="mt-2">
-            Create organization
-          </Button>
-        </form>
-      </div>
-    </div>
+        <Button type="submit" size="lg" isLoading={createOrg.isPending} className="mt-2">
+          Create organization
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

@@ -93,4 +93,26 @@ describe('Product API', () => {
 
     expect(res.status).toBe(201);
   });
+
+  it('searches by name or SKU, and treats special characters as plain text', async () => {
+    await Product.create([
+      { organizationId: ctx.organizationId, name: 'Notebook (A4)', sku: 'NB-A4', price: 100, stock: 1 },
+      { organizationId: ctx.organizationId, name: 'Pen', sku: 'PEN.1', price: 100, stock: 1 },
+      { organizationId: ctx.organizationId, name: 'Pencil', sku: 'PENCIL', price: 100, stock: 1 },
+    ]);
+    const find = (q: string) =>
+      request(app).get('/api/products').query({ search: q }).set('Authorization', `Bearer ${ownerToken}`);
+
+    const brackets = await find('(A4');
+    expect(brackets.status).toBe(200);
+    expect(brackets.body.products).toHaveLength(1);
+
+    // "." must match a real dot only, not any letter
+    const dot = await find('PEN.1');
+    expect(dot.body.products).toHaveLength(1);
+
+    const word = await find('pen');
+    expect(word.body.products).toHaveLength(2);
+    expect(word.body.pagination.total).toBe(2);
+  });
 });

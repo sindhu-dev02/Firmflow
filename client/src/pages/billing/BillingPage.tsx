@@ -7,6 +7,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/billing/StatusBadge';
 import { formatMoney, formatDateTime } from '@/lib/format';
+import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 export function BillingPage() {
   const navigate = useNavigate();
@@ -19,11 +22,17 @@ export function BillingPage() {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   if (subLoading) {
-    return <p className="text-sm text-muted-foreground">Loading billing details…</p>;
+    return (
+      <div role="status" aria-label="Loading" className="flex flex-col gap-6">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-40 w-full" />
+        <TableSkeleton rows={3} cols={4} />
+      </div>
+    );
   }
 
   if (subError || !subData) {
-    return <p className="text-sm text-destructive">Could not load your subscription.</p>;
+    return <ErrorState message="Could not load your subscription." />;
   }
 
   const { subscription } = subData;
@@ -82,13 +91,13 @@ export function BillingPage() {
           )}
 
           {subscription.cancelAtPeriodEnd && (
-            <p className="rounded-md bg-amber-500/10 px-3 py-2 text-sm text-amber-600 ring-1 ring-inset ring-amber-500/20 dark:text-amber-400">
+            <p className="rounded-md bg-warning/15 px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-warning/40">
               This plan is cancelled and won&apos;t renew. You&apos;ll keep access until the date above.
             </p>
           )}
 
           {subscription.status === 'past_due' && (
-            <p className="rounded-md bg-amber-500/10 px-3 py-2 text-sm text-amber-600 ring-1 ring-inset ring-amber-500/20 dark:text-amber-400">
+            <p className="rounded-md bg-warning/15 px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-warning/40">
               Your last payment didn&apos;t go through. Update your payment details to avoid losing access.
             </p>
           )}
@@ -131,30 +140,28 @@ export function BillingPage() {
         <h2 className="mb-4 text-lg font-semibold text-foreground">Invoices</h2>
 
         {invoicesLoading ? (
-          <p className="text-sm text-muted-foreground">Loading invoices…</p>
+          <TableSkeleton rows={3} cols={4} />
         ) : !invoiceData || invoiceData.invoices.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
-            <Receipt size={20} className="text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">No invoices yet</p>
-            <p className="text-sm text-muted-foreground">
-              Invoices appear here after your first successful payment.
-            </p>
-          </div>
+          <EmptyState
+            icon={Receipt}
+            title="No invoices yet"
+            description="Invoices appear here after your first successful payment."
+          />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Amount
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-right text-[13px] font-medium text-muted-foreground">
                     Receipt
                   </th>
                 </tr>
@@ -172,7 +179,7 @@ export function BillingPage() {
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
                           invoice.status === 'paid'
-                            ? 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400'
+                            ? 'bg-success/10 text-success ring-success/25'
                             : invoice.status === 'failed'
                               ? 'bg-destructive/10 text-destructive ring-destructive/20'
                               : 'bg-muted text-muted-foreground ring-border'

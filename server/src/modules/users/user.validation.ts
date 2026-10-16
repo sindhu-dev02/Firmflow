@@ -14,3 +14,14 @@ export const inviteUserSchema = z.object({
     role: z.enum(["employee", "customer"]), // never org_owner or super_admin via invite
   }),
 });
+
+export const updateMemberSchema = z.object({
+  body: z
+    .object({
+      name: z.string().trim().min(2, "Name must be at least 2 characters").optional(),
+      email: z.string().trim().email("Enter a valid email").optional(),
+    })
+    .refine((v) => v.name !== undefined || v.email !== undefined, {
+      message: "Send a name or an email to change",
+    }),
+});

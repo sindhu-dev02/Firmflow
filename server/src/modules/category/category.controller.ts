@@ -5,6 +5,7 @@ import { serializeCategory } from './category.serializer';
 import { catchAsync } from '../../shared/utils/catchAsync';
 import { AppError } from '../../middlewares/errorHandler';
 import { Types } from 'mongoose';
+import { logActivity } from '../../shared/utils/logActivity';
 
 export const createCategory = catchAsync(async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
@@ -16,6 +17,14 @@ export const createCategory = catchAsync(async (req: Request, res: Response) => 
   }
 
   const category = await Category.create({ organizationId, name });
+
+  await logActivity(req, {
+    action: 'category.created',
+    targetType: 'category',
+    targetId: String(category._id),
+    metadata: { name: category.name },
+  });
+
   res.status(201).json({ category: serializeCategory(category) });
 });
 
@@ -56,8 +65,18 @@ export const updateCategory = catchAsync(async (req: Request, res: Response) => 
     }
   }
 
+  const oldName = category.name;
   category.name = req.body.name;
   await category.save();
+
+  if (oldName !== category.name) {
+    await logActivity(req, {
+      action: 'category.renamed',
+      targetType: 'category',
+      targetId: String(category._id),
+      metadata: { name: category.name, oldName },
+    });
+  }
 
   res.status(200).json({ category: serializeCategory(category) });
 });
@@ -76,5 +95,12 @@ export const deleteCategory = catchAsync(async (req: Request, res: Response) => 
   );
 
   await category.deleteOne();
+
+  await logActivity(req, {
+    action: 'category.deleted',
+    targetType: 'category',
+    targetId: String(category._id),
+    metadata: { name: category.name },
+  });
   res.status(204).send();
 });

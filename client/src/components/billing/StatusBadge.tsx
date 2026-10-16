@@ -1,9 +1,9 @@
 import type { SubscriptionStatus } from '@/types';
 
 const STYLES: Record<SubscriptionStatus, string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400',
-  trialing: 'bg-sky-500/10 text-sky-600 ring-sky-500/20 dark:text-sky-400',
-  past_due: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400',
+  active: 'bg-success/10 text-success ring-success/25',
+  trialing: 'bg-primary/10 text-primary ring-primary/20',
+  past_due: 'bg-warning/15 text-amber-800 ring-warning/30 dark:text-amber-300',
   cancelled: 'bg-muted text-muted-foreground ring-border',
   created: 'bg-muted text-muted-foreground ring-border',
 };

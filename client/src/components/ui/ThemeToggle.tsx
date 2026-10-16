@@ -17,7 +17,7 @@ export function ThemeToggle() {
           onClick={() => setTheme(opt.value)}
           className={`rounded-sm px-2.5 py-1 text-xs font-medium transition-colors ${
             theme === opt.value
-              ? "bg-card text-foreground shadow-sm"
+              ? "bg-card text-foreground ring-1 ring-border"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >

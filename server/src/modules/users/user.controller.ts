@@ -239,3 +239,68 @@ export const deleteUser = catchAsync(async (req: Request, res: Response) => {
       },
     });
   });
+
+// Change a person's name or email.
+//  - the owner can edit employees and customers
+//  - an employee can edit customers only
+//  - nobody edits themselves here (use the Profile page) and nobody edits an owner
+export const updateMember = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const actor = req.user!;
+  const organizationId = actor.organizationId;
+  const body = req.body as { name?: string; email?: string };
+  const name = body.name?.trim();
+  const email = body.email?.trim();
+
+  if (id === actor.userId) {
+    throw new AppError("Edit your own details on the Profile page", 400);
+  }
+
+  const target = await User.findOne({ _id: id, organizationId });
+  if (!target) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (target.role === "org_owner") {
+    throw new AppError("You cannot edit an organization owner", 403);
+  }
+
+  if (actor.role === "employee" && target.role !== "customer") {
+    throw new AppError("Only the owner can edit team members", 403);
+  }
+
+  const changed: string[] = [];
+
+  if (name !== undefined && name !== target.name) {
+    target.name = name;
+    changed.push("name");
+  }
+
+  if (email !== undefined) {
+    const newEmail = email.toLowerCase();
+    if (newEmail !== target.email) {
+      const taken = await User.exists({ email: newEmail, _id: { $ne: target._id } });
+      if (taken) {
+        throw new AppError("A user with this email already exists", 409);
+      }
+      target.email = newEmail;
+      changed.push("email");
+    }
+  }
+
+  if (changed.length > 0) {
+    await target.save();
+
+    await logActivity(req, {
+      action: "user.updated",
+      targetType: "user",
+      targetId: String(target._id),
+      metadata: { name: target.name, role: target.role, changed },
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: { user: serializeUser(target) },
+  });
+});

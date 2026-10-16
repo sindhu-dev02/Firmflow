@@ -6,6 +6,8 @@ import { serializeOrder } from './order.serializer';
 import { catchAsync } from '../../shared/utils/catchAsync';
 import { AppError } from '../../middlewares/errorHandler';
 import { Address } from '../address/address.model';
+import { logActivity } from '../../shared/utils/logActivity';
+import { User } from '../users/user.model';
 
 interface PreparedOrderItem {
   productId: Types.ObjectId;
@@ -105,6 +107,19 @@ export const createOrder = catchAsync(async (req: Request, res: Response) => {
     shippingAddressSnapshot,
   });
 
+  const customer = await User.findById(customerId).select('name');
+
+  await logActivity(req, {
+    action: 'order.created',
+    targetType: 'order',
+    targetId: String(order._id),
+    metadata: {
+      ref: String(order._id).slice(-6).toUpperCase(),
+      customerName: customer?.name,
+      totalAmount,
+    },
+  });
+
   res.status(201).json({ order: serializeOrder(order) });
 });
 
@@ -184,8 +199,18 @@ export const updateOrderStatus = catchAsync(async (req: Request, res: Response) 
     );
   }
 
+  const previousStatus = order.status;
   order.status = status;
   await order.save();
+
+  if (previousStatus !== status) {
+    await logActivity(req, {
+      action: 'order.status_changed',
+      targetType: 'order',
+      targetId: String(order._id),
+      metadata: { ref: String(order._id).slice(-6).toUpperCase(), status },
+    });
+  }
 
   res.status(200).json({ order: serializeOrder(order) });
 });

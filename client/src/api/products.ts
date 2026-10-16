@@ -12,7 +12,7 @@ export interface ProductPayload {
   name: string;
   sku: string;
   description?: string;
-  price: number; // paise/cents — integer
+  price: number; // paise/paise — integer
   stock?: number;
   isActive?: boolean;
   categoryId?: string | null; // null = no category

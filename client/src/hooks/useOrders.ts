@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ordersApi, type ListOrdersParams, type CreateOrderPayload } from '@/api/orders';
 import { getErrorMessage } from '@/lib/errors';
@@ -8,6 +8,7 @@ export function useOrders(params: ListOrdersParams = {}) {
   return useQuery({
     queryKey: ['orders', params],
     queryFn: () => ordersApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 

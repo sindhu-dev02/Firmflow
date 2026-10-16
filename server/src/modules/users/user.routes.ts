@@ -7,11 +7,13 @@ import {
   deactivateUser, 
   reactivateUser,
   deleteUser,
-  listCustomers
+  listCustomers,
+  updateMember
 } from "./user.controller";
 import { authenticate } from "../../middlewares/authenticate";
 import { validate } from "../../middlewares/validate";
-import { updateProfileSchema, inviteUserSchema } from "./user.validation";
+import { updateProfileSchema, inviteUserSchema, updateMemberSchema } from "./user.validation";
+import { AppError } from "../../middlewares/errorHandler";
 import { requireTenant } from "../../middlewares/tenantScope";
 import { authorize } from "../../middlewares/authorize";
 import { checkPlanLimit } from "../../middlewares/checkPlanLimit";
@@ -35,9 +37,22 @@ router.post(
   requireTenant,
   authorize("org_owner", "employee"),
   validate(inviteUserSchema),
+  // Only the owner can add staff. Employees can still add customers.
+  (req, _res, next) =>
+    req.body.role === 'employee' && req.user!.role !== 'org_owner'
+      ? next(new AppError("Only the owner can add team members", 403))
+      : next(),
   (req, res, next) =>
     req.body.role === 'employee' ? employeeSeatLimit(req, res, next) : next(),
   inviteUser
+);
+
+router.patch(
+  "/:id",
+  requireTenant,
+  authorize("org_owner", "employee"),
+  validate(updateMemberSchema),
+  updateMember
 );
 
 router.patch(
